@@ -77,8 +77,9 @@ section.view{display:grid;gap:18px;grid-template-columns:minmax(0,1fr)}
 .rank td,.rank th{padding:6px 6px;border-bottom:1px solid var(--line);text-align:left}
 .rank th{font-family:var(--display);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--soft);font-weight:500}
 .rank td.r{text-align:right}
+.rank th.r{text-align:right}
 .medal{display:inline-flex;width:22px;height:22px;border-radius:50%;align-items:center;justify-content:center;font-family:var(--display);font-size:11px;background:var(--line)}
-.medal.m1{background:#D4AF6A;color:#2E2118}.medal.m2{background:#C9C2B4;color:#2E2118}.medal.m3{background:#C08A5A;color:#2E2118}
+.medal.m1{background:#D4AF6A;color:#2E2118}.medal.m4,.medal.m5{background:#8FA37F;color:#FBF7EF}.medal[title]{cursor:help}.medal.m2{background:#C9C2B4;color:#2E2118}.medal.m3{background:#C08A5A;color:#2E2118}
 
 /* tablas de trabajo */
 .tw{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
@@ -214,7 +215,7 @@ body.jug .mtools{display:none}
   </header>
   <nav class="tabs" id="tabs" role="tablist"></nav>
   <div class="mtools" id="mTools"><span class="mini"><b id="cloudSt">Nube: se guarda sola mientras trabajas.</b><br>Los concursantes ven siempre lo último guardado. La copia es por si acaso.</span><span style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="cloudNow">Guardar ya</button><button class="btn" data-export="estado">Copia de seguridad</button><label class="btn" style="cursor:pointer">Cargar estado<input type="file" id="loadEst" accept=".json,application/json" hidden></label><button class="btn" id="lockBtn">Cerrar sesión de máster</button></span></div>
-  <div class="sample" id="sampleBar"><span>Estás viendo <b>datos de ejemplo</b> para probar el tracker: estados, tiradas y Estrellas inventados.</span><button class="btn" id="clearAll">Empezar en limpio</button></div>
+
   <main id="view"></main>
 </div>
 <div class="toast" id="toast"></div>
@@ -266,28 +267,11 @@ const ST_COD={pend:'·',rap:'R',nor:'N',len:'L',fj:'FJ',fi:'FI',sp:'SP'};
 const ST_COL={pend:'mute',rap:'ok',nor:'gold',len:'warn',fj:'gold-soft',fi:'bad',sp:'line'};
 const MST=['pend','Y','Z','X','F']; const MST_TXT={pend:'Sin marcar',Y:'Posteó con tirada',Z:'Posteó sin tirada',X:'Posteó con faltas',F:'No posteó'}; const MST_COD={pend:'·',Y:'✓',Z:'Z',X:'X',F:'F'};
 function blank(){ return {turno:1,total:20,tab:'pabellon',ronda:'R1',posts:{},t1:{},rondas:{},cuchara:{},secretos:JSON.parse(JSON.stringify(DEF_SECRETOS)),renuncia:{},ejemplo:false,modo:'master',yo:'irina',tabJ:'mi',calc:{fase:'base',mod:'',dado:'',otros:''},caja:{},fu:{},fsel:'logan',mt:{},cfg:{cierre:true,sinPJ:true,desc:10}}; }
-function sample(){
-  const s=blank(); s.ejemplo=true; s.turno=3;
-  const st1=['rap','nor','rap','rap','nor','len','rap','nor','rap','rap','nor','rap','fj','rap','nor','rap','len','nor','rap'];
-  const st2=['nor','rap','rap','nor','rap','nor','len','rap','rap','nor','rap','rap','nor','rap','rap','nor','nor','rap','len'];
-  const st3=['rap','pend','nor','rap','pend','rap','pend','pend','rap','nor','pend','rap','pend','nor','pend','rap','pend','pend','rap'];
-  s.posts={1:{},2:{},3:{}}; PJS.forEach((p,i)=>{ s.posts[1][p.id]=st1[i]; s.posts[2][p.id]=st2[i]; s.posts[3][p.id]=st3[i]; });
-  const T=(acc,obj,met,mod,esp,otros,dado)=>({acc,obj,met,mod,esp,otros,dado,merlin:false,recursos:0,de:''});
-  Object.assign(s.t1,{logan:T('A','tuck','inf',7,5,0,6),volker:T('B','tuck','con',3,0,0,5),irina:T('A','vael','bib',3,2,-2,8),derek:T('A','vael','bib',4,0,-2,3),
-    robert:T('C','tuck','infl',5,0,0,7),ileen:T('A','pommeroy','inf',10,0,-2,4),robin:T('A','pommeroy','inf',4,2,0,9),emma:T('B','rupert','con',6,0,0,2),
-    elizabeth:T('A','vael','inf',4,0,0,8),travis:T('A','rupert','inf',3,0,-2,9),nick:T('B','pommeroy','con',9,0,0,1),amanda:T('B','tuck','con',3,0,0,4),
-    winter:T('B','vael','con',3,0,0,7),maximilian:T('B','rupert','con',2,0,0,1)});
-  s.t1.maximilian.de='emma';
-  s.rondas.R1={}; const R=(b,bd,t,td,p,pd,boc,vael)=>({base:{mod:b,dado:bd,extra:0},toque:{mod:t,dado:td,extra:0},pres:{mod:p,dado:pd,extra:0},bocado:!!boc,vael:!!vael,respeta:{tuck:true,pommeroy:true,vael:true}});
-  Object.assign(s.rondas.R1,{logan:R(6,5,4,7,9,4),irina:R(8,6,5,3,6,8,0,1),robert:R(9,8,8,9,4,5),elizabeth:R(10,7,6,5,4,6,0,0),robin:R(2,4,7,8,3,3,1),emma:R(7,3,6,6,6,9),travis:R(4,9,2,5,3,6),miguel:R(3,6,2,7,2,8,1)});
-  s.caja={logan:{d50:24,mod:4,dado:9},volker:{d50:2,mod:3,dado:4},irina:{d50:31,mod:6,dado:3},derek:{d50:7,mod:5,dado:''},robert:{d50:36,mod:6,dado:8},ileen:{d50:12,mod:10,dado:5},robin:{d50:33,mod:3,dado:6},emma:{d50:14,mod:9,dado:2},elizabeth:{d50:8,mod:10,dado:7},travis:{d50:19,mod:2,dado:''},miguel:{d50:23,mod:3,dado:7},nick:{d50:20,mod:7,dado:6},amanda:{d50:43,mod:3,dado:''},woojin:{d50:38,mod:'',dado:''},maximilian:{d50:2,mod:'',dado:''}};
-  return s;
-}
 let S; try{ S=JSON.parse(localStorage.getItem(KEY)); }catch(e){}
 if(!S) S=blank(); // arranca vacío: turno 1, nadie posteó
 S.modo=UNLOCK?(S.modo||'master'):'jugador'; S.yo=S.yo||'irina'; S.tabJ=S.tabJ||'mi'; S.calc=S.calc||{fase:'base',mod:'',dado:'',otros:''}; S.caja=S.caja||{}; S.fu=S.fu||{}; S.fsel=S.fsel||'logan'; S.mt=S.mt||{}; S.cfg=Object.assign({cierre:true,sinPJ:true,desc:10},S.cfg||{});
 Object.values(S.posts||{}).forEach(P=>Object.keys(P).forEach(k=>{ if(P[k]==='aus') P[k]='fi'; }));
-if(S.ejemplo&&!Object.keys(S.mt).length){ S.mt={1:{c:'Y'},2:{c:'X',f:1}}; }
+if(S.ejemplo){ const keep={yo:S.yo}; S=blank(); S.modo='jugador'; Object.assign(S,keep); } // restos de los datos de prueba: se descartan
 let lastStr='';
 function save(){ const str=JSON.stringify(Object.assign({},S,{_ts:0,modo:0,tab:0,tabJ:0,yo:0,fsel:0,calc:0}));
   if(str!==lastStr){ if(lastStr) S._ts=Date.now(); lastStr=str; if(UNLOCK) cloudSchedule(); }
@@ -306,7 +290,7 @@ function cloudSchedule(){ if(!CLOUD.ready) return; clearTimeout(CLOUD.timer); cl
 async function cloudSave(){ const priv=docPriv(); if(!priv) return; try{ await fbPut(priv,S); await fbPut(DOC_PUB,estadoPublico()); cloudMsg('Guardado en la nube · '+new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})); }
   catch(e){ cloudMsg(e.message==='403'?'La nube rechazó el guardado (revisa las reglas de Firebase). Está guardado en este navegador.':'Sin conexión con la nube. Está guardado en este navegador.',true); } }
 async function cloudLoadMaster(){ const priv=docPriv(); if(!priv){ CLOUD.ready=true; return; } cloudMsg('Buscando la sesión en la nube…');
-  try{ const o=await fbGet(priv); if(o&&(o._ts||0)>(S._ts||0)){ const keep={modo:S.modo,tab:S.tab,yo:S.yo,tabJ:S.tabJ,fsel:S.fsel}; S=Object.assign(blank(),o,keep); lastStr=''; render(); cloudMsg('Sesión recuperada de la nube'); } else cloudMsg(o?'Al día con la nube':'Todavía no hay nada en la nube'); }
+  try{ let o=await fbGet(priv); if(o&&o.ejemplo){ o=null; CLOUD.ready=true; cloudSave(); } if(o&&(o._ts||0)>(S._ts||0)){ const keep={modo:S.modo,tab:S.tab,yo:S.yo,tabJ:S.tabJ,fsel:S.fsel}; S=Object.assign(blank(),o,keep); lastStr=''; render(); cloudMsg('Sesión recuperada de la nube'); } else cloudMsg(o?'Al día con la nube':'Todavía no hay nada en la nube'); }
   catch(e){ cloudMsg('No pude leer la nube. Sigues con lo de este navegador.',true); }
   CLOUD.ready=true; }
 
@@ -381,6 +365,8 @@ function rowCalc(id,ronda){
     out.tiene=true; const total=Number(x.mod||0)+Number(x.dado||0)+ext; const r=rollStars(total,D[f]); out.fases[f]={total,dif:D[f],...r,mods,ext,capWarn}; out.stars+=r.st; });
   const boc=R?.bocado?(ronda==='F'?2:1):0, vae=R?.vael?1:0, eq=R?.equipo?2:0; out.bonus=boc+vae+eq; out.stars+=out.bonus; out.final=ronda==='F'?out.stars*2:out.stars; return out;
 }
+function premioPos(id){ const n=acct().nPrem; const L=clasif().filter(r=>!S.renuncia[r.p.id]).slice(0,n).map(r=>r.p.id); return L.indexOf(id); }
+function medal(r,i){ const k=premioPos(r.p.id); return `<span class="medal ${k>=0?'m'+(k+1):''}" ${k>=0?`title="Puesto ${k+1} del bote"`:''}>${i+1}</span>`; }
 function clasif(){
   return PJS.map(p=>{ const per={}; let tot=0; Object.keys(RONDAS).forEach(r=>{ const c=rowCalc(p.id,r); per[r]=c.tiene||c.bonus?c.final:0; tot+=per[r]; }); return {p,per,tot,pres:Object.keys(RONDAS).reduce((a,r)=>a+(rowCalc(p.id,r).fases.pres?.st||0),0)}; })
    .sort((a,b)=>b.tot-a.tot||b.pres-a.pres);
@@ -389,11 +375,11 @@ function clasif(){
 // ---------------------------------------------------------------- vistas
 const TABS=[['pabellon','Pabellón'],['turno1','Turno 1 · Llegada'],['rondas','Rondas y Estrellas'],['mochila','Mochilas'],['fichas','Fichas'],['asistencia','Asistencia'],['recompensas','Recompensas'],['jurado','Fichas secretas']];
 function renderTabs(){ $('#tabs').innerHTML=TABS.map(([k,n])=>`<button role="tab" aria-selected="${S.tab===k}" data-tab="${k}">${n}</button>`).join(''); }
-function render(){ $('#tNum').textContent=S.turno; $('#tTot').textContent='de '+S.total; $('#sampleBar').hidden=!S.ejemplo||S.modo==='jugador';
+function render(){ $('#tNum').textContent=S.turno; $('#tTot').textContent='de '+S.total; 
   const jug=S.modo==='jugador'; document.body.classList.toggle('jug',jug); $('#mM').setAttribute('aria-pressed',!jug); $('#mJ').setAttribute('aria-pressed',jug);
   const ys=$('#yoSel'); ys.hidden=!jug; ys.innerHTML=PJS.map(p=>`<option value="${p.id}" ${p.id===S.yo?'selected':''}>${esc(p.nombre)}</option>`).join('');
   $('#tPrev').hidden=jug; $('#tNext').hidden=jug;
-  if(GATE&&!UNLOCK){ $('#tabs').innerHTML=''; $('#sampleBar').hidden=true; $('#view').innerHTML=`<section class="view"><div class="panel gate"><div class="eyebrow">Solo para el máster</div><h2>Contraseña</h2><p class="sub">La parte del máster tiene los secretos del jurado y las cuentas.</p><input type="password" inputmode="numeric" id="passIn" autocomplete="off" aria-label="Contraseña"><div><button class="btn primary" id="passGo">Entrar</button> <button class="btn" data-modo="jugador">Volver</button></div><p class="mini" id="passMsg"></p></div></section>`; setTimeout(()=>$('#passIn')?.focus(),0); return; }
+  if(GATE&&!UNLOCK){ $('#tabs').innerHTML=''; $('#view').innerHTML=`<section class="view"><div class="panel gate"><div class="eyebrow">Solo para el máster</div><h2>Contraseña</h2><p class="sub">La parte del máster tiene los secretos del jurado y las cuentas.</p><input type="password" inputmode="numeric" id="passIn" autocomplete="off" aria-label="Contraseña"><div><button class="btn primary" id="passGo">Entrar</button> <button class="btn" data-modo="jugador">Volver</button></div><p class="mini" id="passMsg"></p></div></section>`; setTimeout(()=>$('#passIn')?.focus(),0); return; }
   if(jug){ $('#tabs').innerHTML=TABS_J.map(([k,n])=>`<button role="tab" aria-selected="${S.tabJ===k}" data-tabj="${k}">${n}</button>`).join(''); $('#view').innerHTML=({mi:vMi,mificha:vMiFicha,pabpub:vPabPub,clas:vClas}[S.tabJ]||vMi)(); }
   else { renderTabs(); $('#view').innerHTML=({pabellon:vPab,turno1:vT1,rondas:vRondas,mochila:vMochila,fichas:vFichas,asistencia:vAsis,recompensas:vRec,jurado:vJurado}[S.tab])(); }
   save(); if(CLOUD.st) cloudMsg(CLOUD.st,CLOUD.bad); }
@@ -419,7 +405,7 @@ function vPab(){
        <div class="kpi"><b class="num">${cnt('rap')}</b><span>rápidos (+10)</span></div><div class="kpi"><b class="num">${cnt('fj')+cnt('fi')}</b><span>faltas (${cnt('fj')} FJ · ${cnt('fi')} FI)</span></div></div>
        <p class="mini" style="margin:10px 0 0">Pendientes: ${PJS.filter(p=>(P[p.id]||'pend')==='pend').map(p=>esc(p.nombre.split(' ')[0])).join(', ')||'nadie'}</p></div>
      <div class="panel"><h2>Clasificación</h2><table class="rank"><thead><tr><th></th><th>Concursante</th><th class="r">Estrellas</th></tr></thead><tbody>
-       ${top.map((r,i)=>`<tr><td><span class="medal ${i<3?'m'+(i+1):''}">${i+1}</span></td><td>${esc(r.p.nombre)}${S.renuncia[r.p.id]?' <span class="chip">sin premio</span>':''}</td><td class="r num">${r.tot}</td></tr>`).join('')}</tbody></table>
+       ${top.map((r,i)=>`<tr><td>${medal(r,i)}</td><td>${esc(r.p.nombre)}${S.renuncia[r.p.id]?' <span class="chip">sin premio</span>':''}</td><td class="r num">${r.tot}</td></tr>`).join('')}</tbody></table>
        <p class="mini" style="margin:8px 0 0">La tabla completa está en «Rondas y Estrellas».</p></div>
    </div></div></section>`;
 }
@@ -469,7 +455,7 @@ function vRondas(){
     <div class="tw"><table class="work"><thead><tr><th>Concursante</th><th>Base · Vael</th><th>Toque · Pommeroy</th><th>Presentación · Tuck</th><th>Bonos</th><th>★</th></tr></thead><tbody>${rows}</tbody></table></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button class="btn primary" data-export="veredicto">Copiar veredicto (BBCode)</button><button class="btn" data-export="datosjs">Copiar clasificación para la web</button></div></div>
    <div class="panel"><h2>Clasificación general</h2><div class="tw" style="margin-top:10px"><table class="rank" style="min-width:520px"><thead><tr><th></th><th>Concursante</th>${Object.keys(RONDAS).map(r=>`<th class="r">${r==='F'?'Final ×2':r}</th>`).join('')}<th class="r">Total</th></tr></thead><tbody>
-     ${cl.map((r,i)=>`<tr><td><span class="medal ${i<3?'m'+(i+1):''}">${i+1}</span></td><td>${esc(r.p.nombre)}</td>${Object.keys(RONDAS).map(k=>`<td class="r num">${r.per[k]||'·'}</td>`).join('')}<td class="r num"><b>${r.tot}</b></td></tr>`).join('')}</tbody></table></div></div></section>`;
+     ${cl.map((r,i)=>`<tr><td>${medal(r,i)}</td><td>${esc(r.p.nombre)}</td>${Object.keys(RONDAS).map(k=>`<td class="r num">${r.per[k]||'·'}</td>`).join('')}<td class="r num"><b>${r.tot}</b></td></tr>`).join('')}</tbody></table></div><p class="mini" style="margin:8px 0 0">Los ${acct().nPrem} primeros (con medalla de color) se reparten el bote de grageas.</p></div></section>`;
 }
 
 function vCaja(){
@@ -660,7 +646,7 @@ function vRec(){
     </tbody></table>
     ${A.maxPrem<5?`<div class="alert">Con ${A.nj} jugadores solo pueden premiarse ${A.maxPrem}: el reparto se ajustó solo.</div>`:''}
     <div class="mini-in"><label class="mini"><input type="checkbox" data-cfg="cierre" ${S.cfg.cierre?'checked':''}> Contar un turno de cierre sin tirada</label></div></div>
-    <div class="panel"><h2>Bote · ${A.bote} grageas</h2><table class="rank"><tbody>${cl.map((r,i)=>`<tr><td><span class="medal ${i<3?'m'+(i+1):''}">${i+1}</span></td><td>${esc(r.p.nombre)}</td><td class="r num">${A.rep[i]??0}</td></tr>`).join('')||'<tr><td class="mini">Todavía no hay clasificación.</td></tr>'}</tbody></table>
+    <div class="panel"><h2>Bote · ${A.bote} grageas</h2><table class="rank"><tbody>${cl.map((r,i)=>`<tr><td>${medal(r,i)}</td><td>${esc(r.p.nombre)}</td><td class="r num">${A.rep[i]??0}</td></tr>`).join('')||'<tr><td class="mini">Todavía no hay clasificación.</td></tr>'}</tbody></table>
      ${Object.keys(S.renuncia).filter(k=>S.renuncia[k]).length?`<p class="mini">Renunciaron al premio: ${Object.keys(S.renuncia).filter(k=>S.renuncia[k]).map(k=>esc(BY[k].nombre.split(' ')[0])).join(', ')}. Su parte pasa al siguiente.</p>`:''}</div>
     <div class="panel"><h2>Hana · ${A.master} grageas</h2><table class="acct"><tbody>
       ${row('Por turnos',A.masterPT*A.cuenta,`${A.masterPT} × ${A.cuenta}`)}
@@ -701,7 +687,7 @@ function vMi(){
   if(C.mod!==''&&C.dado!==''){ const ext=Math.min(7,autoT+(Number(C.otros)||0)); const tot=Number(C.mod)+Number(C.dado)+ext; const dif=C.fase==='rescate'?9:D[C.fase]; const r=rollStars(tot,dif);
     calcOut=`<div class="bigres">${tot} <span class="mini">contra ${dif}</span></div><div class="stars" style="font-size:22px">${C.fase==='rescate'?(r.st?'¡Plato salvado!':'No alcanza'):'★'.repeat(r.st)+'☆'.repeat(3-r.st)}</div>`; }
   return `<section class="view">
-   ${UNLOCK?`<div class="pview">Así ve el tracker <b>${esc(p.nombre)}</b>: su puesto, su ficha, el pabellón y la clasificación. Nada de fichas secretas ni de lo que averiguaron los demás.</div>`:''}
+   
    ${pizarra()?`<div style="margin-bottom:18px">${pizarra()}</div>`:''}<div class="grid2"><div style="display:grid;gap:18px;align-content:start">
     <div class="panel me"><img alt="" src="${foto(p.id)}"><div><div class="eyebrow">Puesto ${p.puesto} · ${hilera}</div><h2>${esc(p.nombre)}</h2><div class="script">${esc(p.tag)}</div>
       <div class="neigh">${near.map(q=>chip(q,'A tu lado')).join('')}${chip(front,'Enfrente')}</div></div></div>
@@ -731,7 +717,7 @@ function vPabPub(){
 }
 function vClas(){ const cl=clasif();
   return `<section class="view"><div class="panel"><div class="eyebrow">Después de cada veredicto</div><h2>Clasificación</h2><div class="tw" style="margin-top:10px"><table class="rank" style="min-width:520px"><thead><tr><th></th><th>Concursante</th>${Object.keys(RONDAS).map(r=>`<th class="r">${r==='F'?'Final ×2':r}</th>`).join('')}<th class="r">Total</th></tr></thead><tbody>
-  ${cl.map((r,i)=>`<tr style="${r.p.id===S.yo?'background:var(--card2);font-weight:700':''}"><td><span class="medal ${i<3?'m'+(i+1):''}">${i+1}</span></td><td>${esc(r.p.nombre)}</td>${Object.keys(RONDAS).map(k=>`<td class="r num">${r.per[k]||'·'}</td>`).join('')}<td class="r num"><b>${r.tot}</b></td></tr>`).join('')}</tbody></table></div></div></section>`; }
+  ${cl.map((r,i)=>`<tr style="${r.p.id===S.yo?'background:var(--card2);font-weight:700':''}"><td>${medal(r,i)}</td><td>${esc(r.p.nombre)}</td>${Object.keys(RONDAS).map(k=>`<td class="r num">${r.per[k]||'·'}</td>`).join('')}<td class="r num"><b>${r.tot}</b></td></tr>`).join('')}</tbody></table></div><p class="mini" style="margin:8px 0 0">Los ${acct().nPrem} primeros (con medalla de color) se reparten el bote de grageas.</p></div></section>`; }
 
 // ---------------------------------------------------------------- exportaciones
 function exportVeredicto(){
@@ -783,8 +769,8 @@ document.addEventListener('keydown',e=>{ if(e.key==='Enter'&&e.target.id==='pass
 function estadoPublico(){ const c=JSON.parse(JSON.stringify(S)); delete c.secretos; delete c.modo; delete c.yo; delete c.tabJ; delete c.calc; delete c.tab; delete c.cfg;
   Object.values(c.fu||{}).forEach(u=>{ delete u.notas; }); c._fecha=new Date().toISOString(); return c; }
 function descargarEstado(){ try{ const blob=new Blob([JSON.stringify(estadoPublico())],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='estado.json'; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },500); }catch(e){} if(/claude\.ai|claudeusercontent/.test(location.host)||!location.protocol.startsWith('http')){ copy(JSON.stringify(estadoPublico())); toast('Estado copiado: pégalo en estado.json'); } else toast('estado.json descargado'); }
-function aplicarEstado(o,keepPriv){ const keep={modo:S.modo,yo:S.yo,tabJ:S.tabJ,calc:S.calc,tab:S.tab,cfg:S.cfg,secretos:S.secretos}; const notas={}; if(keepPriv) Object.entries(S.fu||{}).forEach(([k,u])=>notas[k]=u.notas);
-  S=Object.assign(blank(),o,keep); S.ejemplo=!!o.ejemplo; if(keepPriv) Object.entries(notas).forEach(([k,n])=>{ if(n) fu(k).notas=n; }); }
+function aplicarEstado(o,keepPriv){ if(!o||o.ejemplo) return; const keep={modo:S.modo,yo:S.yo,tabJ:S.tabJ,calc:S.calc,tab:S.tab,cfg:S.cfg,secretos:S.secretos}; const notas={}; if(keepPriv) Object.entries(S.fu||{}).forEach(([k,u])=>notas[k]=u.notas);
+  S=Object.assign(blank(),o,keep); S.ejemplo=false; if(keepPriv) Object.entries(notas).forEach(([k,n])=>{ if(n) fu(k).notas=n; }); }
 document.addEventListener('change',e=>{
   if(e.target.id==='loadEst'){ const f=e.target.files[0]; if(!f) return; f.text().then(t=>{ aplicarEstado(JSON.parse(t),true); render(); toast('Estado cargado'); }).catch(()=>toast('No pude leer ese archivo')); return; }
   const el=e.target, d=el.dataset; const val=el.type==='checkbox'?el.checked:(el.type==='number'?(el.value===''?'':Number(el.value)):el.value);
