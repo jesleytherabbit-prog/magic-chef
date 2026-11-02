@@ -1,0 +1,229 @@
+// ==UserScript==
+// @name         Magic Chef · del foro al tracker
+// @namespace    https://jesleytherabbit-prog.github.io/magic-chef/
+// @version      1.0
+// @description  Lee los posts y los dados del tema de Magic Chef y los envía al tracker.
+// @match        https://hp-avada-kedavra.foroactivo.com/t37947*
+// @grant        none
+// ==/UserScript==
+
+(function () {
+  'use strict';
+
+  // ---------------------------------------------------------------- datos fijos
+  const MASTER = 'Hana Park';
+  const DADOS = 'Dados Mágicos';
+  const FB = { apiKey: 'AIzaSyCK40yLbR9jEi4LSb3UNipmuD-ExXKfPwI', projectId: 'appsavada' };
+  const DOC = 'MC-MAGICCHEF-IMPORT';
+  const PJS = {
+    logan: 'Logan Pusset-Strauss', volker: 'Volker Krämer', irina: 'Irina Mills', derek: 'Derek Black',
+    robert: 'Robert Stevenson', ileen: 'Ileen Eaglebone', owein: 'Owein Higham', robin: 'Robin Blackstone',
+    emma: 'Emma Hakim', elizabeth: 'Elizabeth Atkinson', travis: 'Travis', miguel: 'Miguel Umberland',
+    hiraki: 'Hiraki Mynos', nick: 'Nick Walterson', jennifer: 'Jennifer Harrison', amanda: 'Amanda Goldgrasp',
+    winter: 'Winter A. Torrance', elle: 'Elle Winthers', maximilian: 'Maximilian Jackson', woojin: 'Woojin Moon'
+  };
+  const JUECES = {
+    tuck: /\b(tuck|barnaby)\b/i,
+    pommeroy: /pommeroy|c[ée]leste/i,
+    vael: /\bvael\b|\bingrid\b/i,
+    rupert: /\brupert\b|\bbramble\b/i
+  };
+  const JN = { tuck: 'Tuck', pommeroy: 'Pommeroy', vael: 'Vael', rupert: 'Rupert' };
+  const MES = { ene: 0, feb: 1, mar: 2, abr: 3, may: 4, jun: 5, jul: 6, ago: 7, sep: 8, oct: 9, nov: 10, dic: 11 };
+
+  const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+  const ID_DE = {}; Object.entries(PJS).forEach(([id, n]) => { ID_DE[norm(n)] = id; });
+  const pjId = nombre => ID_DE[norm(nombre)] || null;
+
+  // ---------------------------------------------------------------- fechas del foro
+  function fecha(txt) {
+    const t = String(txt || '').trim();
+    let m = t.match(/(Hoy|Ayer) a las (\d{1,2}):(\d{2})/i);
+    if (m) { const d = new Date(); if (/ayer/i.test(m[1])) d.setDate(d.getDate() - 1); d.setHours(+m[2], +m[3], 0, 0); return d; }
+    m = t.match(/(\d{1,2}) (\w{3})\w* (\d{4})\s*-\s*(\d{1,2}):(\d{2})/);
+    if (m) { const mes = MES[norm(m[2]).slice(0, 3)]; if (mes != null) return new Date(+m[3], mes, +m[1], +m[4], +m[5]); }
+    return null;
+  }
+
+  // ---------------------------------------------------------------- leer una página
+  function leerPagina(doc, url) {
+    const out = [];
+    doc.querySelectorAll('div.post[id^="p"]').forEach(el => {
+      const pid = el.id.slice(1);
+      const au = el.querySelector('p.author');
+      if (!au) return;
+      const nombre = (au.querySelector('strong') || {}).textContent || '';
+      const fechaTxt = au.textContent.replace(/^[\s\S]*?por\s*/i, '').replace(nombre, '').trim();
+      const cont = el.querySelector('.content');
+      const html = cont ? cont.innerHTML : '';
+      const texto = cont ? (cont.textContent || '').replace(/\s+/g, ' ') : ''; // textContent también lee lo que está dentro de spoilers
+      out.push({ pid: +pid, autor: nombre.trim(), fecha: fecha(fechaTxt), fechaTxt, html, texto, url: url.split('#')[0] + '#' + pid });
+    });
+    return out;
+  }
+  async function leerTodo() {
+    const urls = new Set([location.href.split('#')[0]]);
+    document.querySelectorAll('a[href*="/t37947"]').forEach(a => { const h = a.href.split('#')[0].split('?')[0]; if (/\/t37947(p\d+)?-/.test(h)) urls.add(h); });
+    let posts = [];
+    for (const u of urls) {
+      if (u === location.href.split('#')[0]) { posts = posts.concat(leerPagina(document, u)); continue; }
+      try { const r = await fetch(u, { credentials: 'include' }); const h = await r.text(); posts = posts.concat(leerPagina(new DOMParser().parseFromString(h, 'text/html'), u)); } catch (e) { console.warn('Magic Chef: no pude leer', u, e); }
+    }
+    const vistos = new Set(); posts = posts.filter(p => !vistos.has(p.pid) && vistos.add(p.pid));
+    return posts.sort((a, b) => a.pid - b.pid);
+  }
+
+  // ---------------------------------------------------------------- entender la acción del Turno 1
+  function acciones(texto) {
+    const t = String(texto || '').replace(/Última edición por[\s\S]*$/i, '');
+    // qué tirada es: primero mira la propia tirada; si no dice nada, lo que está justo antes
+    const metodo = (antes, dentro) => {
+      const d = dentro;
+      if (/biblioteca|investigaci[oó]n/i.test(d)) return { acc: 'A', met: 'bib' };
+      if (/informantes/i.test(d)) return { acc: 'A', met: 'inf' };
+      if (/seguidores|coordinaci[oó]n/i.test(d)) return { acc: 'A', met: 'seg' };
+      if (/influencia|intimidaci[oó]n/i.test(d)) return { acc: 'C' };
+      if (/seducci[oó]n|congeni/i.test(d)) return { acc: 'B' };
+      if (/oratoria/i.test(d) && /espec[ií]fico|trasfondo/i.test(d)) return { acc: 'A', met: 'inf' };
+      const a = antes.slice(-220);
+      if (/congeni|buf[eé]/i.test(a)) return { acc: 'B' };
+      if (/biblioteca/i.test(a)) return { acc: 'A', met: 'bib' };
+      if (/informantes/i.test(a)) return { acc: 'A', met: 'inf' };
+      if (/seguidores/i.test(a)) return { acc: 'A', met: 'seg' };
+      return { acc: 'B' };
+    };
+    const hitsEn = v => { const h = []; Object.entries(JUECES).forEach(([k, re]) => { const g = new RegExp(re.source, 'gi'); let m; while ((m = g.exec(v))) h.push({ k, i: m.index }); }); return h.sort((a, b) => a.i - b.i); };
+    const elegir = (v, met) => { // entre varios jueces mencionados, el que está junto a palabras de investigar o del mismo trasfondo
+      const h = hitsEn(v); if (!h.length) return null;
+      const pal = met === 'bib' ? /biblioteca|libro|investig|analiz/i : met === 'inf' ? /informantes|contactos|investig|averig/i : met === 'seg' ? /seguidores/i : /congeni|charl|habl|acerc|salud|bufé|buf[eé]/i;
+      const bueno = h.filter(x => pal.test(v.slice(Math.max(0, x.i - 90), x.i + 90)));
+      return (bueno.length ? bueno[bueno.length - 1] : h[h.length - 1]).k;
+    };
+    // cada tirada empieza con el dado: "1d10 (8)", "Dado (10)", "1D10 [8]", "d10(6)", "dado: 2", "4 (Dado)"
+    const starts = []; const g = /\d{0,3}d1?10\s*[(\[:]|\bdados?\s*[(\[:]\s*\d|\d+\s*\(\s*dado\s*\)/gi; let m;
+    while ((m = g.exec(t))) { if (!starts.length || m.index - starts[starts.length - 1] > 12) starts.push(m.index); }
+    if (!starts.length) { const tail = t.slice(-700); const mt = metodo(tail, ''); const k = mt.acc === 'C' ? null : elegir(tail, mt.met); return k || mt.acc === 'C' ? [Object.assign(k ? { obj: k } : {}, mt, { rev: true })] : []; }
+    let anterior = null;
+    return starts.map((st, n) => {
+      const prev = n ? starts[n - 1] : Math.max(0, st - 450);
+      const next = starts[n + 1] || t.length;
+      const antes = t.slice(Math.max(prev, st - 450), st);
+      let dentro = t.slice(st, Math.min(next, st + 220)); const corte = dentro.search(/=\s*\d+/); if (corte > 0) dentro = dentro.slice(0, corte + 6);
+      let mt = metodo(antes, dentro);
+      if (mt.acc === 'B' && anterior && anterior.acc === 'A' && /oratoria|investigaci/i.test(dentro)) mt = { acc: 'A', met: anterior.met };
+      anterior = mt;
+      if (mt.acc === 'C') return { acc: 'C' };
+      let k = elegir(antes, mt.met) || (hitsEn(dentro)[0] || {}).k || null;
+      if (!k) k = elegir(t.slice(Math.max(0, st - 1500), st), mt.met);
+      return Object.assign(k ? { obj: k } : {}, mt);
+    });
+  }
+
+  // ---------------------------------------------------------------- armar el turno
+  function armar(posts, inicioPid, limite) {
+    const ini = posts.find(p => p.pid === inicioPid);
+    const desde = ini ? ini.fecha : null;
+    const posteriores = posts.filter(p => p.pid > inicioPid);
+    const fin = posteriores.find(p => p.autor === MASTER);
+    const turno = fin ? posteriores.filter(p => p.pid < fin.pid) : posteriores;
+    const r = { posts: {}, dados: {}, t1: {}, links: {}, detalle: [] };
+    turno.forEach(p => {
+      if (p.autor === DADOS) {
+        const m = p.texto.match(/El miembro\s*'\s*([^']+?)\s*'[\s\S]*?'D\d+'\s*:\s*([\d,\s]+)/i);
+        if (!m) return; const id = pjId(m[1]); if (!id) return;
+        const nums = m[2].split(/[,\s]+/).filter(Boolean).map(Number);
+        r.dados[id] = (r.dados[id] || []).concat(nums);
+        return;
+      }
+      const id = pjId(p.autor); if (!id) return;
+      if (!r.links[id]) r.links[id] = p.url;
+      if (!r.posts[id] && p.fecha && desde) {
+        const h = (p.fecha - desde) / 36e5;
+        let st = 'nor'; if (h <= 24) st = 'rap'; if (limite && (limite - p.fecha) / 36e5 <= 12) st = 'len';
+        r.posts[id] = st;
+      }
+      if (!r.t1[id]) r.t1[id] = { acciones: acciones(p.texto) };
+      r.detalle.push({ id, p });
+    });
+    Object.entries(r.dados).forEach(([id, d]) => { (r.t1[id] = r.t1[id] || { acciones: [] }).dados = d; });
+    return r;
+  }
+
+  // ---------------------------------------------------------------- enviar
+  async function enviar(payload) {
+    const url = `https://firestore.googleapis.com/v1/projects/${FB.projectId}/databases/(default)/documents/partidas/${DOC}?key=${FB.apiKey}`;
+    const body = { fields: { d: { stringValue: JSON.stringify(payload) }, at: { integerValue: String(Date.now()) }, v: { integerValue: '1' } } };
+    const r = await fetch(url, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (!r.ok) throw new Error('Firebase ' + r.status);
+  }
+
+  // ---------------------------------------------------------------- panel
+  const css = `#mcf-btn{position:fixed;right:18px;bottom:18px;z-index:99999;padding:10px 16px;border:0;border-radius:99px;background:#B05E3E;color:#FBF7EF;font:600 13px Georgia,serif;letter-spacing:.06em;box-shadow:0 4px 14px rgba(0,0,0,.3);cursor:pointer}
+#mcf{position:fixed;right:18px;bottom:70px;z-index:99999;width:min(720px,calc(100vw - 36px));max-height:78vh;overflow:auto;background:#FBF7EF;color:#45372B;border:1px solid #C4A05A;border-radius:10px;box-shadow:0 14px 40px rgba(0,0,0,.35);font:14px/1.45 Georgia,serif;padding:16px 18px}
+#mcf h3{margin:0 0 8px;font:700 18px Georgia,serif;color:#8E4A30}
+#mcf label{display:block;margin:6px 0;font-size:13px}
+#mcf select,#mcf input{font:14px Georgia,serif;padding:3px 6px;border:1px solid #C4A05A;border-radius:5px;background:#fff;color:#45372B}
+#mcf table{width:100%;border-collapse:collapse;margin-top:10px;font-size:13px}
+#mcf th{background:#2E2118;color:#E3C98E;text-align:left;padding:5px 6px;font-weight:600}
+#mcf td{border-top:1px solid rgba(69,55,43,.15);padding:5px 6px;vertical-align:top}
+#mcf .rap{color:#5E7752;font-weight:700}#mcf .len{color:#A9473A;font-weight:700}#mcf .nor{color:#8E6A2A;font-weight:700}
+#mcf .rev{background:#FFF3C4}
+#mcf .acts{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+#mcf button{padding:8px 14px;border:0;border-radius:99px;background:#B05E3E;color:#FBF7EF;font:600 13px Georgia,serif;cursor:pointer}
+#mcf button.g{background:#657F59}
+#mcf .msg{margin-top:8px;font-style:italic}`;
+  const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
+  const btn = document.createElement('button'); btn.id = 'mcf-btn'; btn.textContent = '🍳 Magic Chef'; document.body.appendChild(btn);
+  let panel = null, POSTS = [];
+
+  const guard = (k, v) => { try { if (v === undefined) return localStorage.getItem('mcf-' + k); localStorage.setItem('mcf-' + k, v); } catch (e) { return null; } };
+
+  btn.addEventListener('click', async () => {
+    if (panel) { panel.remove(); panel = null; return; }
+    panel = document.createElement('div'); panel.id = 'mcf'; panel.innerHTML = '<h3>Magic Chef · del foro al tracker</h3><div class="msg">Leyendo todas las páginas del tema…</div>'; document.body.appendChild(panel);
+    POSTS = await leerTodo();
+    const turnos = POSTS.filter(p => p.autor === MASTER);
+    if (!turnos.length) { panel.innerHTML = '<h3>Magic Chef</h3><p>No encontré posts de Hana en este tema.</p>'; return; }
+    const ult = turnos[turnos.length - 1];
+    panel.innerHTML = `<h3>Magic Chef · del foro al tracker</h3>
+      <label>Turno que empieza en el post de Hana:
+        <select id="mcf-ini">${turnos.map(p => `<option value="${p.pid}" ${p.pid === ult.pid ? 'selected' : ''}>#${p.pid} · ${p.fechaTxt}</option>`).join('')}</select></label>
+      <label>Número de turno en el tracker: <input id="mcf-turno" type="number" min="1" max="60" value="${guard('turno') || 1}" style="width:60px"></label>
+      <label>Fecha límite (para marcar los lentos): <input id="mcf-lim" type="datetime-local" value="${guard('lim') || ''}"></label>
+      <div id="mcf-tab"></div>
+      <div class="acts"><button class="g" id="mcf-cerrar">Cerrar</button><button id="mcf-env">Enviar al tracker</button></div>
+      <div class="msg" id="mcf-msg"></div>`;
+    const pintar = () => {
+      const lim = panel.querySelector('#mcf-lim').value ? new Date(panel.querySelector('#mcf-lim').value) : null;
+      const r = armar(POSTS, +panel.querySelector('#mcf-ini').value, lim);
+      panel._r = r;
+      const T = { rap: 'Rápido', nor: 'A tiempo', len: 'Lento' };
+      const filas = Object.keys(PJS).map(id => {
+        const x = r.t1[id]; const ac = (x && x.acciones) || []; const da = (x && x.dados) || [];
+        const desc = ac.map(a => a.acc === 'C' ? 'C · ingrediente' : a.acc === 'B' ? `B · congeniar con ${JN[a.obj]}` : `A · ${a.met === 'bib' ? 'Biblioteca' : a.met === 'seg' ? 'Seguidores' : 'Informantes'} → ${JN[a.obj]}`).join('<br>');
+        const revisar = r.posts[id] && (!ac.length || ac.length !== da.length || ac.some(a => a.rev || (a.acc !== 'C' && !a.obj)));
+        return `<tr class="${revisar ? 'rev' : ''}"><td>${PJS[id]}</td><td class="${r.posts[id] || ''}">${r.posts[id] ? T[r.posts[id]] : '—'}</td><td>${da.join(', ') || '—'}</td><td>${desc || (r.posts[id] ? '<i>no la entendí</i>' : '—')}</td></tr>`;
+      }).join('');
+      panel.querySelector('#mcf-tab').innerHTML = `<table><thead><tr><th>Concursante</th><th>Posteo</th><th>Dados</th><th>Acción que entendí</th></tr></thead><tbody>${filas}</tbody></table>
+        <div class="msg">En amarillo: lo que conviene revisar en el tracker (no encontré la tirada escrita, falta el juez o no coinciden dados y acciones).</div>`;
+    };
+    panel.querySelector('#mcf-ini').addEventListener('change', pintar);
+    panel.querySelector('#mcf-lim').addEventListener('change', e => { guard('lim', e.target.value); pintar(); });
+    panel.querySelector('#mcf-turno').addEventListener('change', e => guard('turno', e.target.value));
+    panel.querySelector('#mcf-cerrar').addEventListener('click', () => { panel.remove(); panel = null; });
+    panel.querySelector('#mcf-env').addEventListener('click', async () => {
+      const r = panel._r; const msg = panel.querySelector('#mcf-msg');
+      const ini = POSTS.find(p => p.pid === +panel.querySelector('#mcf-ini').value);
+      const payload = { ts: Date.now(), turno: +panel.querySelector('#mcf-turno').value || 1, inicio: ini && ini.fecha ? ini.fecha.toISOString() : null,
+        limite: panel.querySelector('#mcf-lim').value || null, posts: r.posts, dados: r.dados, links: r.links,
+        t1: Object.fromEntries(Object.entries(r.t1).map(([id, x]) => [id, { acciones: x.acciones || [], dados: x.dados || [] }])) };
+      msg.textContent = 'Enviando…';
+      try { await enviar(payload); msg.textContent = '¡Listo! Abre el tracker como máster y pulsa «Traer del foro».'; }
+      catch (e) { msg.textContent = 'No pude enviarlo (' + e.message + '). Revisa las reglas de Firebase.'; }
+    });
+    pintar();
+  });
+
+  // para pruebas fuera del foro
+  window.__MCF = { leerPagina, armar, acciones, fecha };
+})();
