@@ -112,11 +112,25 @@
       let mt = metodo(antes, dentro);
       if (mt.acc === 'B' && anterior && anterior.acc === 'A' && /oratoria|investigaci/i.test(dentro)) mt = { acc: 'A', met: anterior.met };
       anterior = mt;
-      if (mt.acc === 'C') return { acc: 'C' };
+      let suya = t.slice(st, Math.min(next, st + 260)); const fin = suya.slice(3).search(/·|\btiradas?\b/i); if (fin >= 0) suya = suya.slice(0, fin + 3);
+      const tr = trasfondo(suya) || trasfondo(antes.slice(-200));
+      if (mt.acc === 'C') return Object.assign({ acc: 'C' }, tr ? { tr } : {});
       let k = elegir(antes, mt.met) || (hitsEn(dentro)[0] || {}).k || null;
       if (!k) k = elegir(t.slice(Math.max(0, st - 1500), st), mt.met);
-      return Object.assign(k ? { obj: k } : {}, mt);
+      return Object.assign(k ? { obj: k } : {}, mt, tr ? { tr } : {});
     });
+  }
+
+  // ---------------------------------------------------------------- qué trasfondo nombra (tipo, ámbito y específico)
+  function trasfondo(v) {
+    const W = 'A-Za-zÁÉÍÓÚáéíóúñ';
+    const re1 = new RegExp(`(Biblioteca|Informantes|Influencia|Seguidores)\\s*(?:espec[ií]fic[ao])?\\s*[\\(\\[]?\\s*([${W} ]{3,30}?)\\s*[\\)\\]]?\\s*(?:>|›|->)\\s*([${W} ]{3,30})`, 'gi');
+    const re2 = new RegExp(`(Biblioteca|Informantes|Influencia|Seguidores)\\s*(?:espec[ií]fic[ao])?\\s*[\\(\\[]?\\s*([${W}]{3,20}(?: [${W}]{3,20})?)`, 'gi');
+    const last = re => { let m, x = null; while ((m = re.exec(v))) x = m; return x; };
+    const m = last(re1) || last(re2);
+    if (!m) return null;
+    const cap = w => w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : '';
+    return { tipo: cap(m[1]), amb: (m[2] || '').trim(), sub: (m[3] || '').trim().split(/\s+(?:para|de|II|III|IV|V|I)\b/)[0] };
   }
 
   // ---------------------------------------------------------------- lazos, uniones y vínculos
