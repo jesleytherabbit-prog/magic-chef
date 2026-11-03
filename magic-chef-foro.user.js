@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Magic Chef · del foro al tracker
 // @namespace    https://jesleytherabbit-prog.github.io/magic-chef/
-// @version      1.0
+// @version      1.1
 // @description  Lee los posts y los dados del tema de Magic Chef y los envía al tracker.
 // @match        https://hp-avada-kedavra.foroactivo.com/t37947*
 // @grant        none
@@ -79,10 +79,12 @@
     // qué tirada es: primero mira la propia tirada; si no dice nada, lo que está justo antes
     const metodo = (antes, dentro) => {
       const d = dentro;
-      if (/biblioteca|investigaci[oó]n/i.test(d)) return { acc: 'A', met: 'bib' };
+      if (/biblioteca/i.test(d)) return { acc: 'A', met: 'bib' };
       if (/informantes/i.test(d)) return { acc: 'A', met: 'inf' };
       if (/seguidores|coordinaci[oó]n/i.test(d)) return { acc: 'A', met: 'seg' };
+      if (/investigaci[oó]n/i.test(d) && !/trasfondo/i.test(d)) return { acc: 'A', met: 'bib' };
       if (/influencia|intimidaci[oó]n/i.test(d)) return { acc: 'C' };
+      if (/trasfondo/i.test(d + ' ' + antes.slice(-160))) return { acc: 'A', met: null }; // «Tirada de Trasfondos …»: el tipo sale de la ficha
       if (/seducci[oó]n|congeni/i.test(d)) return { acc: 'B' };
       if (/oratoria/i.test(d) && /espec[ií]fico|trasfondo/i.test(d)) return { acc: 'A', met: 'inf' };
       const a = antes.slice(-220);
@@ -114,6 +116,7 @@
       anterior = mt;
       let suya = t.slice(st, Math.min(next, st + 260)); const fin = suya.slice(3).search(/·|\btiradas?\b/i); if (fin >= 0) suya = suya.slice(0, fin + 3);
       const tr = trasfondo(suya) || trasfondo(antes.slice(-200));
+      if (mt.acc === 'A' && !mt.met && tr && tr.tipo) mt = { acc: 'A', met: { Biblioteca: 'bib', Informantes: 'inf', Seguidores: 'seg' }[tr.tipo] || null };
       if (mt.acc === 'C') return Object.assign({ acc: 'C' }, tr ? { tr } : {});
       let k = elegir(antes, mt.met) || (hitsEn(dentro)[0] || {}).k || null;
       if (!k) k = elegir(t.slice(Math.max(0, st - 1500), st), mt.met);
@@ -127,6 +130,8 @@
     const re1 = new RegExp(`(Biblioteca|Informantes|Influencia|Seguidores)\\s*(?:espec[ií]fic[ao])?\\s*[\\(\\[]?\\s*([${W} ]{3,30}?)\\s*[\\)\\]]?\\s*(?:>|›|->)\\s*([${W} ]{3,30})`, 'gi');
     const re2 = new RegExp(`(Biblioteca|Informantes|Influencia|Seguidores)\\s*(?:espec[ií]fic[ao])?\\s*[\\(\\[]?\\s*([${W}]{3,20}(?: [${W}]{3,20})?)`, 'gi');
     const last = re => { let m, x = null; while ((m = re.exec(v))) x = m; return x; };
+    const re3 = new RegExp(`trasfondos?\\s*(?:espec[ií]fic[ao]s?)?\\s*[\\(\\[]?\\s*([${W} ]{3,30}?)\\s*[\\)\\]]?\\s*(?:>|›|->)\\s*([${W} ]{3,30})`, 'gi');
+    const t3 = last(re3); if (!last(re1) && t3) return { tipo: null, amb: t3[1].trim(), sub: t3[2].trim().split(/\s+(?:para|de|II|III|IV|V|I)\b/)[0] };
     const m = last(re1) || last(re2);
     if (!m) return null;
     const cap = w => w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : '';
@@ -177,6 +182,7 @@
       }
       const id = pjId(p.autor); if (!id) return;
       if (!r.links[id]) r.links[id] = p.url;
+      if (!r.pids) r.pids = {}; if (!r.pids[id]) r.pids[id] = p.pid;
       if (!r.posts[id] && p.fecha && desde) {
         const h = (p.fecha - desde) / 36e5;
         let st = 'nor'; if (h <= 24) st = 'rap'; if (limite && (limite - p.fecha) / 36e5 <= 12) st = 'len';
@@ -195,6 +201,8 @@
   // ---------------------------------------------------------------- enviar
   async function enviar(payload) {
     const url = `https://firestore.googleapis.com/v1/projects/${FB.projectId}/databases/(default)/documents/partidas/${DOC}?key=${FB.apiKey}`;
+    try { const g = await fetch(url); if (g.ok) { const j = await g.json(); const prev = JSON.parse(j.fields.d.stringValue);
+      if (prev && prev.turno === payload.turno) { ['posts', 'dados', 'links', 't1', 'pids'].forEach(k => { payload[k] = Object.assign({}, prev[k] || {}, payload[k] || {}); }); payload.inicio = payload.inicio || prev.inicio; payload.limite = payload.limite || prev.limite; } } } catch (e) { /* si no hay nada guardado, se envía tal cual */ }
     const body = { fields: { d: { stringValue: JSON.stringify(payload) }, at: { integerValue: String(Date.now()) }, v: { integerValue: '1' } } };
     const r = await fetch(url, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     if (!r.ok) throw new Error('Firebase ' + r.status);
@@ -243,7 +251,7 @@
       const T = { rap: 'Rápido', nor: 'A tiempo', len: 'Lento' };
       const filas = Object.keys(PJS).map(id => {
         const x = r.t1[id]; const ac = (x && x.acciones) || []; const da = (x && x.dados) || [];
-        const desc = ac.map(a => a.acc === 'C' ? 'C · ingrediente' : a.acc === 'B' ? `B · congeniar con ${JN[a.obj]}` : `A · ${a.met === 'bib' ? 'Biblioteca' : a.met === 'seg' ? 'Seguidores' : 'Informantes'} → ${JN[a.obj]}`).join('<br>');
+        const desc = ac.map(a => a.acc === 'C' ? 'C · ingrediente' : a.acc === 'B' ? `B · congeniar con ${JN[a.obj]}` : `A · ${a.met === 'bib' ? 'Biblioteca' : a.met === 'seg' ? 'Seguidores' : a.met === 'inf' ? 'Informantes' : 'Trasfondo (el tipo lo saca el tracker de la ficha)'} → ${JN[a.obj]}`).join('<br>');
         const revisar = r.posts[id] && (!ac.length || ac.length !== da.length || ac.some(a => a.rev || (a.acc !== 'C' && !a.obj)));
         const lz = ac.find(a => a.lazo); const al = (x && x.alertas) || [];
         const extra = (lz ? `<br><b>Usa el trasfondo de ${PJS[lz.lazo].split(' ')[0]}</b>` : '') + (al.length ? `<br><span style="color:#A9473A">⚠ Menciona: ${al.map(a => a.t).join(', ')}</span>` : '');
@@ -254,21 +262,68 @@
     };
     panel.querySelector('#mcf-ini').addEventListener('change', pintar);
     panel.querySelector('#mcf-lim').addEventListener('change', e => { guard('lim', e.target.value); pintar(); });
-    panel.querySelector('#mcf-turno').addEventListener('change', e => guard('turno', e.target.value));
+    panel.querySelector('#mcf-turno').addEventListener('change', e => { guard('turno', e.target.value); guard('turno-' + panel.querySelector('#mcf-ini').value, e.target.value); });
     panel.querySelector('#mcf-cerrar').addEventListener('click', () => { panel.remove(); panel = null; });
     panel.querySelector('#mcf-env').addEventListener('click', async () => {
       const r = panel._r; const msg = panel.querySelector('#mcf-msg');
       const ini = POSTS.find(p => p.pid === +panel.querySelector('#mcf-ini').value);
       const payload = { ts: Date.now(), turno: +panel.querySelector('#mcf-turno').value || 1, inicio: ini && ini.fecha ? ini.fecha.toISOString() : null,
-        limite: panel.querySelector('#mcf-lim').value || null, posts: r.posts, dados: r.dados, links: r.links,
-        t1: Object.fromEntries(Object.entries(r.t1).map(([id, x]) => [id, { acciones: x.acciones || [], dados: x.dados || [], alertas: x.alertas || [] }])) };
+        limite: panel.querySelector('#mcf-lim').value || null, posts: r.posts, dados: r.dados, links: r.links, pids: r.pids || {},
+        t1: Object.fromEntries(Object.entries(r.t1).map(([id, x]) => [id, { pid: (r.pids || {})[id] || null, acciones: x.acciones || [], dados: x.dados || [], alertas: x.alertas || [] }])) };
       msg.textContent = 'Enviando…';
+      guard('turno-' + panel.querySelector('#mcf-ini').value, String(payload.turno)); Object.values(r.pids || {}).forEach(p => guard('env-' + p, '1'));
       try { await enviar(payload); msg.textContent = '¡Listo! Abre el tracker como máster y pulsa «Traer del foro».'; }
       catch (e) { msg.textContent = 'No pude enviarlo (' + e.message + '). Revisa las reglas de Firebase.'; }
     });
     pintar();
   });
 
+  // ---------------------------------------------------------------- un botón por post: enviar solo esa tirada
+  const css2 = `.mcf-uno{margin-left:8px;padding:2px 9px;border:0;border-radius:99px;background:#B05E3E;color:#FBF7EF;font:600 11px Georgia,serif;cursor:pointer;vertical-align:middle}
+.mcf-uno.ok{background:#657F59}.mcf-uno:disabled{opacity:.6;cursor:wait}
+#mcf-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:99999;max-width:min(560px,calc(100vw - 32px));background:#FBF7EF;color:#45372B;border:1px solid #C4A05A;border-radius:10px;padding:10px 14px;font:14px/1.45 Georgia,serif;box-shadow:0 10px 30px rgba(0,0,0,.3)}`;
+  const st2 = document.createElement('style'); st2.textContent = css2; document.head.appendChild(st2);
+  const toast = html => { let t = document.getElementById('mcf-toast'); if (!t) { t = document.createElement('div'); t.id = 'mcf-toast'; document.body.appendChild(t); }
+    t.innerHTML = html; clearTimeout(t._h); t._h = setTimeout(() => t.remove(), 9000); };
+  function payloadDe(r, turno, inicio, limite) {
+    return { ts: Date.now(), turno, inicio, limite, posts: r.posts, dados: r.dados, links: r.links, pids: r.pids || {},
+      t1: Object.fromEntries(Object.entries(r.t1).map(([id, x]) => [id, { pid: (r.pids || {})[id] || null, acciones: x.acciones || [], dados: x.dados || [], alertas: x.alertas || [] }])) };
+  }
+  async function enviarUno(pid, b) {
+    b.disabled = true; b.textContent = 'Leyendo…';
+    try {
+      if (!POSTS.length) POSTS = await leerTodo();
+      const yo = POSTS.find(p => p.pid === pid); const id = yo && pjId(yo.autor);
+      if (!id) throw new Error('no es un post de concursante');
+      const ini = POSTS.filter(p => p.autor === MASTER && p.pid < pid).pop();
+      if (!ini) throw new Error('no encontré el turno de Hana anterior');
+      // los dados de este post: los de «Dados Mágicos» de este PJ hasta su siguiente post o el siguiente turno
+      const sig = POSTS.find(p => p.pid > pid && (p.autor === MASTER || p.autor === yo.autor));
+      const dados = POSTS.filter(p => p.autor === DADOS && p.pid > pid && (!sig || p.pid < sig.pid) && pjId((p.texto.match(/El miembro\s*'\s*([^']+?)\s*'/i) || [])[1] || '') === id);
+      const lim = guard('lim') ? new Date(guard('lim')) : null;
+      const r = armar([ini, yo].concat(dados), ini.pid, lim);
+      const turno = +(guard('turno-' + ini.pid) || guard('turno') || 1);
+      await enviar(payloadDe(r, turno, ini.fecha ? ini.fecha.toISOString() : null, guard('lim') || null));
+      guard('env-' + pid, '1');
+      const x = r.t1[id] || {}; const ac = x.acciones || [];
+      const desc = ac.map(a => a.acc === 'C' ? 'C · ingrediente' : a.acc === 'B' ? 'B · congeniar con ' + JN[a.obj] : 'A · ' + (a.met === 'bib' ? 'Biblioteca' : a.met === 'seg' ? 'Seguidores' : a.met === 'inf' ? 'Informantes' : 'Trasfondo') + ' → ' + (JN[a.obj] || '¿juez?')).join(' · ') || '<i>no entendí la acción</i>';
+      toast(`<b>${PJS[id]}</b> enviado al turno ${turno}.<br>${desc}<br>Dados: ${(x.dados || []).join(', ') || '—'}<br><small>En el tracker pulsa «Traer del foro»: solo se suma lo que no estaba importado.</small>`);
+      b.textContent = '✓ En el tracker'; b.classList.add('ok');
+    } catch (e) { toast('No pude enviarlo: ' + e.message); b.textContent = '🍳 Al tracker'; }
+    b.disabled = false;
+  }
+  document.querySelectorAll('div.post[id^="p"]').forEach(el => {
+    const au = el.querySelector('p.author'); if (!au) return;
+    const nombre = ((au.querySelector('strong') || {}).textContent || '').trim();
+    if (!pjId(nombre)) return;
+    const pid = +el.id.slice(1);
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'mcf-uno';
+    b.textContent = guard('env-' + pid) ? '✓ En el tracker' : '🍳 Al tracker'; if (guard('env-' + pid)) b.classList.add('ok');
+    b.title = 'Enviar solo esta tirada al tracker';
+    b.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); enviarUno(pid, b); });
+    au.appendChild(b);
+  });
+
   // para pruebas fuera del foro
-  window.__MCF = { leerPagina, armar, acciones, fecha, lazo, alertas };
+  window.__MCF = { leerPagina, armar, acciones, fecha, lazo, alertas, trasfondo, payloadDe };
 })();
