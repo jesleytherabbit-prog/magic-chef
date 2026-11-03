@@ -119,6 +119,8 @@
       if (mt.acc === 'A' && !mt.met && tr && tr.tipo) mt = { acc: 'A', met: { Biblioteca: 'bib', Informantes: 'inf', Seguidores: 'seg' }[tr.tipo] || null };
       if (mt.acc === 'C') return Object.assign({ acc: 'C' }, tr ? { tr } : {});
       let k = elegir(antes, mt.met) || (hitsEn(dentro)[0] || {}).k || null;
+      const af = t.slice(st, Math.min(next, st + 200)).match(/(?:penaliza\w*|bonifica\w*|afinidad)\s*(?:por|con|de)?\s*(?:la\s+)?(?:jueza?\s+|profesora?\s+|señora?\s+|madame\s+)?([A-Za-zÁÉÍÓÚáéíóú]+)/i);
+      if (af) { const j = Object.keys(JUECES).find(j => JUECES[j].test(af[1])); if (j) k = j; } // «−1 penalización por Vael»: la propia tirada dice a quién va
       if (!k) k = elegir(t.slice(Math.max(0, st - 1500), st), mt.met);
       return Object.assign(k ? { obj: k } : {}, mt, tr ? { tr } : {});
     });
