@@ -326,7 +326,12 @@ async function importarForo(){
   const P=S.posts[t]=S.posts[t]||{};
   Object.entries(o.posts||{}).forEach(([id,st])=>{ if(!BY[id]) return; const cur=P[id]||'pend'; if(cur==='pend'||cur==='rap'||cur==='nor'||cur==='len'){ if(cur!==st) nP++; P[id]=st; } });
   S.foro=S.foro||{}; S.foro[t]={ts:o.ts,inicio:o.inicio,limite:o.limite,dados:o.dados||{},links:o.links||{}};
+  S.foroHecho=S.foroHecho||{}; let nYa=0;
   if(t===1){ Object.entries(o.t1||{}).forEach(([id,x])=>{ if(!BY[id]) return; const dados=x.dados||[]; const acc=x.acciones||[];
+      const clave=x.pid?('p'+x.pid):((o.links||{})[id]||null);
+      if(clave&&S.foroHecho[clave]){ // ya importado: no vuelve a sumar fama, lazos ni acciones; solo completa dados que falten
+        t1Keys(id).forEach((k,i)=>{ const r=S.t1[k]; if(r&&dados[i]!=null&&(r.dado===''||r.dado==null)){ r.dado=dados[i]; r.imp=true; nD++; } }); nYa++; return; }
+      if(clave) S.foroHecho[clave]=t;
       const nExtra=Math.max(0,Math.max(dados.length,acc.length)-1); const fama=FICHAS[id]?.v?.fama||0;
       if(nExtra>0&&fama&&t1FamaN(id)<Math.min(nExtra,fama)){ const r0=S.t1[id]=S.t1[id]||{}; const antes=t1FamaN(id), n=Math.min(nExtra,fama); r0.fama=n; const u=fu(id); u.c.fama=Math.max(0,(u.c.fama||0)+(n-antes)); }
       const r0=S.t1[id]=S.t1[id]||{obj:'tuck',met:'inf'};
@@ -335,13 +340,14 @@ async function importarForo(){
         if(a&&a.lazo&&!r.lazo&&(FICHAS[id]?.lz||[]).some(z=>z[0]===a.lazo)){ r.lazo=a.lazo; const u=fu(id); u.c['lz_'+a.lazo]=(u.c['lz_'+a.lazo]||0)+1; }
         if(a&&!r.acc){ r.acc=a.acc; if(a.obj) r.obj=a.obj; if(a.met) r.met=a.met; r.imp=true; nA++; }
         if(a&&a.tr&&!r.espK&&!r.genK){ const nz=v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z> ]/g,' ').replace(/\s+/g,' ').trim();
-          const src=r.lazo&&BY[r.lazo]?r.lazo:id; const L=fTr(src).filter(t=>!a.tr.tipo||t.t===a.tr.tipo); const amb=nz(a.tr.amb), sub=nz(a.tr.sub);
+          const src=r.lazo&&BY[r.lazo]?r.lazo:id; const L=fTr(src).filter(t=>a.tr.tipo?t.t===a.tr.tipo:(a.acc!=='A'||['Biblioteca','Informantes','Seguidores'].includes(t.t))); const amb=nz(a.tr.amb), sub=nz(a.tr.sub);
           const esp=sub?L.find(t=>t.a.includes('>')&&nz(t.a.split('>')[1]).includes(sub.split(' ')[0])&&(!amb||nz(t.a.split('>')[0]).includes(amb.split(' ')[0]))):(amb?L.find(t=>t.a.includes('>')&&nz(t.a.split('>')[1]).includes(amb.split(' ')[0])):null);
           if(esp) r.espK=esp.k;
+          if(esp&&a.acc==='A'&&!a.met){ const M={Biblioteca:'bib',Informantes:'inf',Seguidores:'seg'}; if(M[esp.t]) r.met=M[esp.t]; } // «Tirada de Trasfondos…»: el tipo sale de la ficha
           const gen=L.find(t=>!t.a.includes('>')&&amb&&nz(t.a)===nz(amb.split('>')[0]))||(esp?L.find(t=>!t.a.includes('>')&&nz(t.a)===nz(esp.a.split('>')[0])):null);
           if(gen) r.genK=gen.k; }
         if(dados[i]!=null&&(r.dado===''||r.dado==null)){ r.dado=dados[i]; r.imp=true; nD++; } }); }); }
-  render(); toast(`Del foro: ${nP} posteos, ${nD} dados y ${nA} acciones. Revisa lo marcado en amarillo.`);
+  render(); toast(`Del foro: ${nP} posteos, ${nD} dados y ${nA} acciones nuevas${nYa?` · ${nYa} posts ya estaban importados (no se sumó nada de nuevo)`:''}. Revisa lo marcado en amarillo.`);
 }
 async function cloudLoadMaster(){ const priv=docPriv(); if(!priv){ CLOUD.ready=true; return; } cloudMsg('Buscando la sesión en la nube…');
   try{ let o=await fbGet(priv); if(o&&o.ejemplo){ o=null; CLOUD.ready=true; cloudSave(); } if(o&&(o._ts||0)>(S._ts||0)){ const keep={modo:S.modo,tab:S.tab,yo:S.yo,tabJ:S.tabJ,fsel:S.fsel}; S=Object.assign(blank(),o,keep); lastStr=''; render(); cloudMsg('Sesión recuperada de la nube'); } else cloudMsg(o?'Al día con la nube':'Todavía no hay nada en la nube'); }
