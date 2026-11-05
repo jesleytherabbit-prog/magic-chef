@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Magic Chef · del foro al tracker
 // @namespace    https://jesleytherabbit-prog.github.io/magic-chef/
-// @version      1.2
+// @version      1.4
 // @description  Lee los posts y los dados del tema de Magic Chef y los envía al tracker.
 // @match        https://hp-avada-kedavra.foroactivo.com/t37947*
 // @grant        none
@@ -166,6 +166,17 @@
     return out;
   }
 
+  // ---------------------------------------------------------------- la Caja Misteriosa (BBCode de la página de la caja)
+  function cajaPost(texto) {
+    const t = String(texto || '').replace(/Última edición por[\s\S]*$/i, '');
+    const m = t.match(/Caja Misteriosa n[º°o.]*\s*(\d{1,2})/i); if (!m) return null;
+    const c = { n: +m[1] };
+    const num = v => /^\d+$/.test(v) ? +v : null;
+    const r = t.match(/Tirada:\s*1d10\s*\(\s*([\d?]+)\s*\)\s*\+\s*[^()]+\(\s*([\d?]+)\s*\)\s*\+\s*.+?\(\s*([\d?]+)\s*\)(?:\s*([+−-])\s*Otros\s*\(\s*(\d+)\s*\))?\s*=\s*([\d?]+)\s*vs\s*(\d+)/i);
+    if (r) { c.d = num(r[1]); c.a = num(r[2]); c.h = num(r[3]); if (r[5]) c.o = (r[4] === '+' ? 1 : -1) * +r[5]; c.tot = num(r[6]); c.dif = +r[7]; }
+    return c;
+  }
+
   // ---------------------------------------------------------------- armar el turno
   function armar(posts, inicioPid, limite) {
     const ini = posts.find(p => p.pid === inicioPid);
@@ -173,13 +184,16 @@
     const posteriores = posts.filter(p => p.pid > inicioPid);
     const fin = posteriores.find(p => p.autor === MASTER);
     const turno = fin ? posteriores.filter(p => p.pid < fin.pid) : posteriores;
-    const r = { posts: {}, dados: {}, t1: {}, links: {}, detalle: [] };
+    const r = { posts: {}, dados: {}, porCara: {}, cajas: {}, t1: {}, links: {}, detalle: [] };
     turno.forEach(p => {
       if (p.autor === DADOS) {
         const m = p.texto.match(/El miembro\s*'\s*([^']+?)\s*'[\s\S]*?'D\d+'\s*:\s*([\d,\s]+)/i);
         if (!m) return; const id = pjId(m[1]); if (!id) return;
-        const nums = m[2].split(/[,\s]+/).filter(Boolean).map(Number);
-        r.dados[id] = (r.dados[id] || []).concat(nums);
+        for (const c of p.texto.matchAll(/'D(\d+)'\s*:\s*([\d,\s]+)/gi)) { // un mismo mensaje puede traer d50 y d10
+          const nums = c[2].split(/[,\s]+/).filter(Boolean).map(Number);
+          r.dados[id] = (r.dados[id] || []).concat(nums);
+          const pc = r.porCara[id] = r.porCara[id] || {}; pc[c[1]] = (pc[c[1]] || []).concat(nums);
+        }
         return;
       }
       const id = pjId(p.autor); if (!id) return;
@@ -190,13 +204,16 @@
         let st = 'nor'; if (h <= 24) st = 'rap'; if (limite && (limite - p.fecha) / 36e5 <= 12) st = 'len';
         r.posts[id] = st;
       }
+      const cj = cajaPost(p.texto); if (cj) r.cajas[id] = cj; // el último post con la caja manda
       if (!r.t1[id]) {
-        const ac = acciones(p.texto); const lz = lazo(p.texto, id); if (lz) ac.forEach(a => { if (a.acc !== 'B') a.lazo = lz; });
+        const ac = cj ? [] : acciones(p.texto); const lz = lazo(p.texto, id); if (lz) ac.forEach(a => { if (a.acc !== 'B') a.lazo = lz; });
         r.t1[id] = { acciones: ac, alertas: alertas(p.texto), conf: /confesionario/i.test(p.texto.replace(/Última edición por[\s\S]*$/i, '')) };
       }
       r.detalle.push({ id, p });
     });
     Object.entries(r.dados).forEach(([id, d]) => { (r.t1[id] = r.t1[id] || { acciones: [] }).dados = d; });
+    Object.entries(r.cajas).forEach(([id, c]) => { const x = r.t1[id] = r.t1[id] || { acciones: [] }; x.caja = c; x.acciones = []; });
+    Object.entries(r.porCara).forEach(([id, c]) => { const x = r.t1[id]; x.d50 = c['50'] || []; x.d10 = c['10'] || []; });
     return r;
   }
 
@@ -204,7 +221,8 @@
   async function enviar(payload) {
     const url = `https://firestore.googleapis.com/v1/projects/${FB.projectId}/databases/(default)/documents/partidas/${DOC}?key=${FB.apiKey}`;
     try { const g = await fetch(url); if (g.ok) { const j = await g.json(); const prev = JSON.parse(j.fields.d.stringValue);
-      if (prev && prev.turno === payload.turno) { ['posts', 'dados', 'links', 't1', 'pids'].forEach(k => { payload[k] = Object.assign({}, prev[k] || {}, payload[k] || {}); }); payload.inicio = payload.inicio || prev.inicio; payload.limite = payload.limite || prev.limite; } } } catch (e) { /* si no hay nada guardado, se envía tal cual */ }
+      if (prev && prev.turno === payload.turno) { const antes = prev.t1 || {}; Object.entries(payload.t1 || {}).forEach(([id, x]) => { const a = antes[id]; if (!a) return; if (!x.caja) x.caja = a.caja || null; if (!(x.d50 || []).length) x.d50 = a.d50 || []; if (!(x.d10 || []).length) x.d10 = a.d10 || []; }); // la caja y sus dados pueden venir en posts distintos
+        ['posts', 'dados', 'links', 't1', 'pids'].forEach(k => { payload[k] = Object.assign({}, prev[k] || {}, payload[k] || {}); }); payload.inicio = payload.inicio || prev.inicio; payload.limite = payload.limite || prev.limite; } } } catch (e) { /* si no hay nada guardado, se envía tal cual */ }
     const body = { fields: { d: { stringValue: JSON.stringify(payload) }, at: { integerValue: String(Date.now()) }, v: { integerValue: '1' } } };
     const r = await fetch(url, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     if (!r.ok) throw new Error('Firebase ' + r.status);
@@ -254,10 +272,11 @@
       const filas = Object.keys(PJS).map(id => {
         const x = r.t1[id]; const ac = (x && x.acciones) || []; const da = (x && x.dados) || [];
         const desc = ac.map(a => a.acc === 'C' ? 'C · ingrediente' : a.acc === 'B' ? `B · congeniar con ${JN[a.obj]}` : `A · ${a.met === 'bib' ? 'Biblioteca' : a.met === 'seg' ? 'Seguidores' : a.met === 'inf' ? 'Informantes' : 'Trasfondo (el tipo lo saca el tracker de la ficha)'} → ${JN[a.obj]}`).join('<br>');
-        const revisar = r.posts[id] && (!ac.length || ac.length !== da.length || ac.some(a => a.rev || (a.acc !== 'C' && !a.obj)));
+        const hayCaja = x && (x.caja || (x.d50 || []).length);
+        const revisar = r.posts[id] && (hayCaja ? (!x.caja || !(x.d50 || []).length || (x.d10 || []).length !== 1) : (!ac.length || ac.length !== da.length || ac.some(a => a.rev || (a.acc !== 'C' && !a.obj))));
         const lz = ac.find(a => a.lazo); const al = (x && x.alertas) || [];
         const extra = (lz ? `<br><b>Usa el trasfondo de ${PJS[lz.lazo].split(' ')[0]}</b>` : '') + (al.length ? `<br><span style="color:#A9473A">⚠ Menciona: ${al.map(a => a.t).join(', ')}</span>` : '');
-        return `<tr class="${revisar || al.length ? 'rev' : ''}"><td>${PJS[id]}</td><td class="${r.posts[id] || ''}">${r.posts[id] ? T[r.posts[id]] : '—'}</td><td>${da.join(', ') || '—'}</td><td>${desc || (r.posts[id] ? '<i>no la entendí</i>' : '—')}${extra}</td></tr>`;
+        return `<tr class="${revisar || al.length ? 'rev' : ''}"><td>${PJS[id]}</td><td class="${r.posts[id] || ''}">${r.posts[id] ? T[r.posts[id]] : '—'}</td><td>${da.join(', ') || '—'}</td><td>${hayCaja ? `Caja ${x.caja ? 'nº ' + x.caja.n : '<i>sin BBCode</i>'} · d50: ${(x.d50 || []).join(', ') || '—'} · d10: ${(x.d10 || []).join(', ') || '—'}` : (desc || (r.posts[id] ? '<i>no la entendí</i>' : '—'))}${extra}</td></tr>`;
       }).join('');
       panel.querySelector('#mcf-tab').innerHTML = `<table><thead><tr><th>Concursante</th><th>Posteo</th><th>Dados</th><th>Acción que entendí</th></tr></thead><tbody>${filas}</tbody></table>
         <div class="msg">En amarillo: lo que conviene revisar en el tracker (no encontré la tirada escrita, falta el juez o no coinciden dados y acciones).</div>`;
@@ -271,7 +290,7 @@
       const ini = POSTS.find(p => p.pid === +panel.querySelector('#mcf-ini').value);
       const payload = { ts: Date.now(), turno: +panel.querySelector('#mcf-turno').value || 1, inicio: ini && ini.fecha ? ini.fecha.toISOString() : null,
         limite: panel.querySelector('#mcf-lim').value || null, posts: r.posts, dados: r.dados, links: r.links, pids: r.pids || {},
-        t1: Object.fromEntries(Object.entries(r.t1).map(([id, x]) => [id, { pid: (r.pids || {})[id] || null, acciones: x.acciones || [], dados: x.dados || [], alertas: x.alertas || [], conf: !!x.conf }])) };
+        t1: Object.fromEntries(Object.entries(r.t1).map(([id, x]) => [id, { pid: (r.pids || {})[id] || null, acciones: x.acciones || [], dados: x.dados || [], alertas: x.alertas || [], conf: !!x.conf, caja: x.caja || null, d50: x.d50 || [], d10: x.d10 || [] }])) };
       msg.textContent = 'Enviando…';
       guard('turno-' + panel.querySelector('#mcf-ini').value, String(payload.turno)); Object.values(r.pids || {}).forEach(p => guard('env-' + p, '1'));
       try { await enviar(payload); msg.textContent = '¡Listo! Abre el tracker como máster y pulsa «Traer del foro».'; }
@@ -289,12 +308,12 @@
     t.innerHTML = html; clearTimeout(t._h); t._h = setTimeout(() => t.remove(), 9000); };
   function payloadDe(r, turno, inicio, limite) {
     return { ts: Date.now(), turno, inicio, limite, posts: r.posts, dados: r.dados, links: r.links, pids: r.pids || {},
-      t1: Object.fromEntries(Object.entries(r.t1).map(([id, x]) => [id, { pid: (r.pids || {})[id] || null, acciones: x.acciones || [], dados: x.dados || [], alertas: x.alertas || [], conf: !!x.conf }])) };
+      t1: Object.fromEntries(Object.entries(r.t1).map(([id, x]) => [id, { pid: (r.pids || {})[id] || null, acciones: x.acciones || [], dados: x.dados || [], alertas: x.alertas || [], conf: !!x.conf, caja: x.caja || null, d50: x.d50 || [], d10: x.d10 || [] }])) };
   }
   async function enviarUno(pid, b) {
     b.disabled = true; b.textContent = 'Leyendo…';
     try {
-      if (!POSTS.length) POSTS = await leerTodo();
+      POSTS = await leerTodo(); // siempre fresco: así un dado recién tirado se ve sin recargar
       const yo = POSTS.find(p => p.pid === pid); const id = yo && pjId(yo.autor);
       if (!id) throw new Error('no es un post de concursante');
       const ini = POSTS.filter(p => p.autor === MASTER && p.pid < pid).pop();
@@ -304,11 +323,16 @@
       const dados = POSTS.filter(p => p.autor === DADOS && p.pid > pid && (!sig || p.pid < sig.pid) && pjId((p.texto.match(/El miembro\s*'\s*([^']+?)\s*'/i) || [])[1] || '') === id);
       const lim = guard('lim') ? new Date(guard('lim')) : null;
       const r = armar([ini, yo].concat(dados), ini.pid, lim);
-      const turno = +(guard('turno-' + ini.pid) || guard('turno') || 1);
+      let turno = +guard('turno-' + ini.pid);
+      if (!turno) { // post de Hana todavía sin turno asignado: mejor preguntar que mandarlo al turno equivocado
+        const v = prompt(`¿Qué número de turno es el post de Hana #${ini.pid} (${ini.fechaTxt})?`, guard('turno') || '1');
+        if (!v || !(+v >= 1)) throw new Error('falta el número de turno');
+        turno = +v; guard('turno-' + ini.pid, String(turno));
+      }
       await enviar(payloadDe(r, turno, ini.fecha ? ini.fecha.toISOString() : null, guard('lim') || null));
       guard('env-' + pid, '1');
       const x = r.t1[id] || {}; const ac = x.acciones || [];
-      const desc = ac.map(a => a.acc === 'C' ? 'C · ingrediente' : a.acc === 'B' ? 'B · congeniar con ' + JN[a.obj] : 'A · ' + (a.met === 'bib' ? 'Biblioteca' : a.met === 'seg' ? 'Seguidores' : a.met === 'inf' ? 'Informantes' : 'Trasfondo') + ' → ' + (JN[a.obj] || '¿juez?')).join(' · ') || '<i>no entendí la acción</i>';
+      const desc = (x.caja || (x.d50 || []).length) ? `Caja ${x.caja ? 'nº ' + x.caja.n : '(sin BBCode)'} · d50: ${(x.d50 || []).join(', ') || '—'} · d10: ${(x.d10 || []).join(', ') || '—'}` : ac.map(a => a.acc === 'C' ? 'C · ingrediente' : a.acc === 'B' ? 'B · congeniar con ' + JN[a.obj] : 'A · ' + (a.met === 'bib' ? 'Biblioteca' : a.met === 'seg' ? 'Seguidores' : a.met === 'inf' ? 'Informantes' : 'Trasfondo') + ' → ' + (JN[a.obj] || '¿juez?')).join(' · ') || '<i>no entendí la acción</i>';
       toast(`<b>${PJS[id]}</b> enviado al turno ${turno}.<br>${desc}<br>Dados: ${(x.dados || []).join(', ') || '—'}<br><small>En el tracker pulsa «Traer del foro»: solo se suma lo que no estaba importado.</small>`);
       b.textContent = '✓ En el tracker'; b.classList.add('ok');
     } catch (e) { toast('No pude enviarlo: ' + e.message); b.textContent = '🍳 Al tracker'; }
@@ -327,5 +351,5 @@
   });
 
   // para pruebas fuera del foro
-  window.__MCF = { leerPagina, armar, acciones, fecha, lazo, alertas, trasfondo, payloadDe };
+  window.__MCF = { leerPagina, armar, cajaPost, payloadDe, enviar, acciones, fecha, lazo, alertas, trasfondo, payloadDe };
 })();
