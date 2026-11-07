@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Magic Chef · del foro al tracker
 // @namespace    https://jesleytherabbit-prog.github.io/magic-chef/
-// @version      1.5
+// @version      1.6
 // @description  Lee los posts y los dados del tema de Magic Chef y los envía al tracker.
 // @match        https://hp-avada-kedavra.foroactivo.com/t37947*
 // @grant        none
@@ -212,7 +212,7 @@
       const cj = cajaPost(p.texto); if (cj) r.cajas[id] = cj; // el último post con la caja manda
       if (!r.t1[id]) {
         const ac = cj ? [] : acciones(p.texto); const lz = lazo(p.texto, id); if (lz) ac.forEach(a => { if (a.acc !== 'B') a.lazo = lz; });
-        r.t1[id] = { acciones: ac, alertas: alertas(p.texto), conf: /confesionario/i.test(p.texto.replace(/Última edición por[\s\S]*$/i, '')) };
+        r.t1[id] = { acciones: ac, alertas: alertas(p.texto), conf: (t => /confesionario/i.test(t) && !/\bno\b[^.\n]{0,40}confesionario/i.test(t))(p.texto.replace(/Última edición por[\s\S]*$/i, '')) };
       }
       r.detalle.push({ id, p });
     });
@@ -254,6 +254,16 @@
 
   const guard = (k, v) => { try { if (v === undefined) return localStorage.getItem('mcf-' + k); localStorage.setItem('mcf-' + k, v); } catch (e) { return null; } };
 
+  // ---------------------------------------------------------------- Turno 2: Empatía y, si falla, Frialdad
+  function t2desc(x) {
+    x = x || {}; const d = (x.d10 && x.d10.length) ? x.d10 : (x.dados || []);
+    const partes = [`Empatía: <b>${d[0] ?? '—'}</b>`];
+    if (d.length > 1) partes.push(`Frialdad: <b>${d[1]}</b> <small>(solo cuenta si falla Empatía)</small>`);
+    if (x.conf) partes.push('Confesionario ✓');
+    const av = d.length > 2 ? `<br><span style="color:#A9473A">⚠ Tiró ${d.length} d10 (${d.join(', ')}): revisa el orden en el tracker</span>` : '';
+    return { html: partes.join(' · ') + av, revisar: !d.length || d.length > 2, txt: partes.join(' · ').replace(/<[^>]+>/g, '') };
+  }
+
   btn.addEventListener('click', async () => {
     if (panel) { panel.remove(); panel = null; return; }
     panel = document.createElement('div'); panel.id = 'mcf'; panel.innerHTML = '<h3>Magic Chef · del foro al tracker</h3><div class="msg">Leyendo todas las páginas del tema…</div>'; document.body.appendChild(panel);
@@ -264,7 +274,7 @@
     panel.innerHTML = `<h3>Magic Chef · del foro al tracker</h3>
       <label>Turno que empieza en el post de Hana:
         <select id="mcf-ini">${turnos.map(p => `<option value="${p.pid}" ${p.pid === ult.pid ? 'selected' : ''}>#${p.pid} · ${p.fechaTxt}</option>`).join('')}</select></label>
-      <label>Número de turno en el tracker: <input id="mcf-turno" type="number" min="1" max="60" value="${guard('turno') || 1}" style="width:60px"></label>
+      <label>Número de turno en el tracker: <input id="mcf-turno" type="number" min="1" max="60" value="${guard('turno-' + ult.pid) || guard('turno') || 1}" style="width:60px"></label>
       <label>Fecha límite (para marcar los lentos): <input id="mcf-lim" type="datetime-local" value="${guard('lim') || ''}"></label>
       <div id="mcf-tab"></div>
       <div class="acts"><button class="g" id="mcf-cerrar">Cerrar</button><button id="mcf-env">Enviar al tracker</button></div>
@@ -274,21 +284,24 @@
       const r = armar(POSTS, +panel.querySelector('#mcf-ini').value, lim);
       panel._r = r;
       const T = { rap: 'Rápido', nor: 'A tiempo', len: 'Lento' };
+      const esT2 = +panel.querySelector('#mcf-turno').value === 2;
       const filas = Object.keys(PJS).map(id => {
         const x = r.t1[id]; const ac = (x && x.acciones) || []; const da = (x && x.dados) || [];
         const desc = ac.map(a => a.acc === 'C' ? 'C · ingrediente' : a.acc === 'B' ? `B · congeniar con ${JN[a.obj]}` : `A · ${a.met === 'bib' ? 'Biblioteca' : a.met === 'seg' ? 'Seguidores' : a.met === 'inf' ? 'Informantes' : 'Trasfondo (el tipo lo saca el tracker de la ficha)'} → ${JN[a.obj]}`).join('<br>');
         const hayCaja = x && (x.caja || (x.d50 || []).length);
         const revisar = r.posts[id] && (hayCaja ? (!x.caja || !(x.d50 || []).length || (x.d10 || []).length !== 1) : (!ac.length || ac.length !== da.length || ac.some(a => a.rev || (a.acc !== 'C' && !a.obj))));
-        const lz = ac.find(a => a.lazo); const al = (x && x.alertas) || []; const edi = r.edic[id];
+        const lz = esT2 ? null : ac.find(a => a.lazo); const al = (x && x.alertas) || []; const edi = r.edic[id];
+        const t2 = esT2 ? t2desc(x) : null;
         const extra = (lz ? `<br><b>Usa el trasfondo de ${PJS[lz.lazo].split(' ')[0]}</b>` : '') + (al.length ? `<br><span style="color:#A9473A">⚠ Menciona: ${al.map(a => a.t).join(', ')}</span>` : '') + (edi ? `<br><span style="color:#A9473A">⚠ Editado ${edi.txt}: esa fecha daría ${T[edi.stEd]}</span>` : '');
-        return `<tr class="${revisar || al.length || edi ? 'rev' : ''}"><td>${PJS[id]}</td><td class="${r.posts[id] || ''}">${r.posts[id] ? T[r.posts[id]] : '—'}</td><td>${da.join(', ') || '—'}</td><td>${hayCaja ? `Caja ${x.caja ? 'nº ' + x.caja.n : '<i>sin BBCode</i>'} · d50: ${(x.d50 || []).join(', ') || '—'} · d10: ${(x.d10 || []).join(', ') || '—'}` : (desc || (r.posts[id] ? '<i>no la entendí</i>' : '—'))}${extra}</td></tr>`;
+        const rv = esT2 ? (r.posts[id] && t2.revisar) : revisar;
+        return `<tr class="${rv || al.length || edi ? 'rev' : ''}"><td>${PJS[id]}</td><td class="${r.posts[id] || ''}">${r.posts[id] ? T[r.posts[id]] : '—'}</td><td>${da.join(', ') || '—'}</td><td>${esT2 ? (r.posts[id] || da.length ? t2.html : '—') : hayCaja ? `Caja ${x.caja ? 'nº ' + x.caja.n : '<i>sin BBCode</i>'} · d50: ${(x.d50 || []).join(', ') || '—'} · d10: ${(x.d10 || []).join(', ') || '—'}` : (desc || (r.posts[id] ? '<i>no la entendí</i>' : '—'))}${extra}</td></tr>`;
       }).join('');
-      panel.querySelector('#mcf-tab').innerHTML = `<table><thead><tr><th>Concursante</th><th>Posteo</th><th>Dados</th><th>Acción que entendí</th></tr></thead><tbody>${filas}</tbody></table>
-        <div class="msg">En amarillo: lo que conviene revisar en el tracker (no encontré la tirada escrita, falta el juez, no coinciden dados y acciones, o una edición cambiaría el posteo).</div>`;
+      panel.querySelector('#mcf-tab').innerHTML = `<table><thead><tr><th>Concursante</th><th>Posteo</th><th>Dados</th><th>${esT2 ? 'Tiradas del Turno 2' : 'Acción que entendí'}</th></tr></thead><tbody>${filas}</tbody></table>
+        <div class="msg">${esT2 ? 'En amarillo: falta el dado, tiró más de dos d10 (revisa el orden), menciona un recurso o una edición cambiaría el posteo. El primer d10 va a Empatía; el segundo, a Frialdad solo si la Empatía falla.' : 'En amarillo: lo que conviene revisar en el tracker (no encontré la tirada escrita, falta el juez, no coinciden dados y acciones, o una edición cambiaría el posteo).'}</div>`;
     };
-    panel.querySelector('#mcf-ini').addEventListener('change', pintar);
+    panel.querySelector('#mcf-ini').addEventListener('change', e => { const g = guard('turno-' + e.target.value); if (g) panel.querySelector('#mcf-turno').value = g; pintar(); });
     panel.querySelector('#mcf-lim').addEventListener('change', e => { guard('lim', e.target.value); pintar(); });
-    panel.querySelector('#mcf-turno').addEventListener('change', e => { guard('turno', e.target.value); guard('turno-' + panel.querySelector('#mcf-ini').value, e.target.value); });
+    panel.querySelector('#mcf-turno').addEventListener('change', e => { guard('turno', e.target.value); guard('turno-' + panel.querySelector('#mcf-ini').value, e.target.value); pintar(); });
     panel.querySelector('#mcf-cerrar').addEventListener('click', () => { panel.remove(); panel = null; });
     panel.querySelector('#mcf-env').addEventListener('click', async () => {
       const r = panel._r; const msg = panel.querySelector('#mcf-msg');
@@ -337,7 +350,7 @@
       await enviar(payloadDe(r, turno, ini.fecha ? ini.fecha.toISOString() : null, guard('lim') || null));
       guard('env-' + pid, '1');
       const x = r.t1[id] || {}; const ac = x.acciones || [];
-      const desc = (x.caja || (x.d50 || []).length) ? `Caja ${x.caja ? 'nº ' + x.caja.n : '(sin BBCode)'} · d50: ${(x.d50 || []).join(', ') || '—'} · d10: ${(x.d10 || []).join(', ') || '—'}` : ac.map(a => a.acc === 'C' ? 'C · ingrediente' : a.acc === 'B' ? 'B · congeniar con ' + JN[a.obj] : 'A · ' + (a.met === 'bib' ? 'Biblioteca' : a.met === 'seg' ? 'Seguidores' : a.met === 'inf' ? 'Informantes' : 'Trasfondo') + ' → ' + (JN[a.obj] || '¿juez?')).join(' · ') || '<i>no entendí la acción</i>';
+      const desc = turno === 2 ? t2desc(x).html : (x.caja || (x.d50 || []).length) ? `Caja ${x.caja ? 'nº ' + x.caja.n : '(sin BBCode)'} · d50: ${(x.d50 || []).join(', ') || '—'} · d10: ${(x.d10 || []).join(', ') || '—'}` : ac.map(a => a.acc === 'C' ? 'C · ingrediente' : a.acc === 'B' ? 'B · congeniar con ' + JN[a.obj] : 'A · ' + (a.met === 'bib' ? 'Biblioteca' : a.met === 'seg' ? 'Seguidores' : a.met === 'inf' ? 'Informantes' : 'Trasfondo') + ' → ' + (JN[a.obj] || '¿juez?')).join(' · ') || '<i>no entendí la acción</i>';
       toast(`<b>${PJS[id]}</b> enviado al turno ${turno}.<br>${desc}<br>Dados: ${(x.dados || []).join(', ') || '—'}${r.edic[id] ? '<br>⚠ Tiene una edición para revisar en Asistencia.' : ''}<br><small>En el tracker pulsa «Traer del foro»: solo se suma lo que no estaba importado.</small>`);
       b.textContent = '✓ En el tracker'; b.classList.add('ok');
     } catch (e) { toast('No pude enviarlo: ' + e.message); b.textContent = '🍳 Al tracker'; }
