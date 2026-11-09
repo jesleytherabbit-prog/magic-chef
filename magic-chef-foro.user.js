@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         Magic Chef · del foro al tracker
 // @namespace    https://jesleytherabbit-prog.github.io/magic-chef/
-// @version      1.6
-// @description  Lee los posts y los dados del tema de Magic Chef y los envía al tracker.
-// @match        https://hp-avada-kedavra.foroactivo.com/t37947*
+// @version      1.7
+// @description  Lee los posts y los dados del tema de Magic Chef y los envía al tracker. En la ficha de un concursante, envía la ficha.
+// @match        https://hp-avada-kedavra.foroactivo.com/t*
 // @grant        none
 // ==/UserScript==
 
@@ -231,6 +231,36 @@
     const body = { fields: { d: { stringValue: JSON.stringify(payload) }, at: { integerValue: String(Date.now()) }, v: { integerValue: '1' } } };
     const r = await fetch(url, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     if (!r.ok) throw new Error('Firebase ' + r.status);
+  }
+
+  // ---------------------------------------------------------------- fuera del tema de Magic Chef: enviar la ficha de un concursante
+  if (!/^\/t37947(p\d+)?-/.test(location.pathname)) { fichaModo(); return; }
+  function fichaModo() {
+    const posts = [...document.querySelectorAll('div.post[id^="p"]')]; if (!posts.length) return;
+    const au = el => ((el.querySelector('p.author strong') || {}).textContent || '').trim();
+    const yo = au(posts[0]); const id = pjId(yo); if (!id) return; // solo temas abiertos por un concursante
+    const tx = el => { const c = el.cloneNode(true); c.querySelectorAll('br').forEach(b => b.replaceWith('\n')); c.querySelectorAll('span,b,strong,i,em,a,td,th,font,u').forEach(e => e.append(' '));
+      c.querySelectorAll('div,p,li,tr,h1,h2,h3,h4,h5,dd,dt,blockquote').forEach(b => b.append('\n')); return (c.textContent || '').replace(/[ \t\u00a0]+/g, ' ').replace(/ *\n\s*/g, '\n'); };
+    const todo = posts.filter(p => au(p) === yo).map(p => { const c = p.querySelector('.content'); return c ? tx(c) : ''; }).join('\n');
+    const low = todo.toLowerCase(); let a0 = -1; const ra = /atribut|\bstats\b/g; let m;
+    while ((m = ra.exec(low))) { if (/vigor/.test(low.slice(m.index, m.index + 400))) { a0 = m.index; break; } }
+    if (a0 < 0) return; // no parece una ficha
+    const txt = todo.slice(a0, a0 + 16000);
+    const stl = document.createElement('style'); stl.textContent = `#mcf-fi{position:fixed;right:18px;bottom:18px;z-index:99999;padding:10px 16px;border:0;border-radius:99px;background:#B05E3E;color:#FBF7EF;font:600 13px Georgia,serif;letter-spacing:.04em;box-shadow:0 4px 14px rgba(0,0,0,.3);cursor:pointer}#mcf-fi.ok{background:#657F59}#mcf-fi:disabled{opacity:.7;cursor:wait}`; document.head.appendChild(stl);
+    const b = document.createElement('button'); b.id = 'mcf-fi'; b.type = 'button'; b.textContent = '📋 Ficha de ' + yo.split(' ')[0] + ' al tracker'; document.body.appendChild(b);
+    b.addEventListener('click', async () => {
+      b.disabled = true; b.textContent = 'Enviando…';
+      const url = `https://firestore.googleapis.com/v1/projects/${FB.projectId}/databases/(default)/documents/partidas/MC-MAGICCHEF-FICHAS?key=${FB.apiKey}`;
+      try {
+        let prev = {}; try { const g = await fetch(url); if (g.ok) { const j = await g.json(); prev = JSON.parse(j.fields.d.stringValue) || {}; } } catch (e) {}
+        prev[id] = { txt, url: location.href.split('#')[0], ts: Date.now(), autor: yo };
+        const body = { fields: { d: { stringValue: JSON.stringify(prev) }, at: { integerValue: String(Date.now()) }, v: { integerValue: '1' } } };
+        const r = await fetch(url, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        if (!r.ok) throw new Error('Firebase ' + r.status);
+        b.textContent = '✓ Ficha enviada · en el tracker: Fichas → Traer fichas del foro'; b.classList.add('ok');
+      } catch (e) { b.textContent = '⚠ No pude enviarla (' + e.message + '). Reintentar'; }
+      b.disabled = false;
+    });
   }
 
   // ---------------------------------------------------------------- panel
