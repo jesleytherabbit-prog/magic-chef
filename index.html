@@ -278,6 +278,9 @@ table.ttab .who img[hidden]{display:none}
 .dp.tomado{border-color:var(--line);background:transparent}
 .dp.tomado .ingimg{filter:grayscale(1);opacity:.45}
 .dp.tomado b{color:var(--soft);font-weight:500}
+.dp.oculto{border-style:dashed;background:transparent}
+.dp.oculto b{color:var(--soft);font-weight:500;letter-spacing:.2em}
+.dp-qm{width:84px;height:84px;display:grid;place-items:center;border:2px dashed var(--gold);border-radius:50%;font-family:var(--display);font-size:46px;line-height:1;color:var(--soft)}
 .dp-q{display:flex;align-items:center;gap:5px;margin-top:auto;font-size:13px;color:var(--terra-ink,var(--terra))}
 .dp-q img{width:26px;height:26px;border-radius:50%;object-fit:cover;border:1px solid var(--gold)}
 @media (prefers-reduced-motion:reduce){.dp .ingimg{transition:none}}
@@ -993,8 +996,11 @@ function vTurnos(){
 }
 function vDespensa(){
   const {tom}=cajaMapa(); const n=Object.keys(tom).length;
-  const cards=INGR.map(r=>{ const k=r[0], id=tom[k]; return `<div class="dp ${id?'tomado':''}" title="${esc(r[2])}"><span class="dp-n">${k}</span>${ingImg(k,84)||''}<b>${esc(r[1])}</b>${id?`<span class="dp-q"><img alt="" src="${foto(id)}"><span>${esc(BY[id].nombre.split(' ')[0])}</span></span>`:''}</div>`; }).join('');
-  return `<section class="view"><div class="panel"><div class="eyebrow">Ronda 1 · La Caja Misteriosa</div><h2>La despensa</h2><p class="sub">${n} de 50 ingredientes ya tienen dueño. Si tu número está tomado, pasas al siguiente libre.</p>${S.modo==='jugador'?'':`<div class="dp-lock ${S.dpPub?'on':''}"><span><b>${S.dpPub?'Liberada':'Bloqueada'}</b> · ${S.dpPub?'Los concursantes ven la Despensa.':'Los concursantes todavía no ven esta pestaña.'}</span><button class="btn ${S.dpPub?'':'primary'}" data-dplock="1">${S.dpPub?'Volver a bloquear':'Liberar a los concursantes'}</button></div>`}<div class="dp-grid">${cards}</div></div></section>`;
+  const jug=S.modo==='jugador';
+  const cards=INGR.map(r=>{ const k=r[0], id=tom[k];
+    if(jug&&!id) return `<div class="dp oculto" title="Todavía nadie lo ha sacado"><span class="dp-n">${k}</span><span class="dp-qm" aria-hidden="true">?</span><b>???</b></div>`;
+    return `<div class="dp ${id?'tomado':''}" title="${esc(r[2])}"><span class="dp-n">${k}</span>${ingImg(k,84)||''}<b>${esc(r[1])}</b>${id?`<span class="dp-q"><img alt="" src="${foto(id)}"><span>${esc(BY[id].nombre.split(' ')[0])}</span></span>`:''}</div>`; }).join('');
+  return `<section class="view"><div class="panel"><div class="eyebrow">Ronda 1 · La Caja Misteriosa</div><h2>La despensa</h2><p class="sub">${n} de 50 ingredientes ya tienen dueño. Si tu número está tomado, pasas al siguiente libre.${jug?' Los ingredientes sin dueño siguen ocultos hasta que alguien los saque.':''}</p>${S.modo==='jugador'?'':`<div class="dp-lock ${S.dpPub?'on':''}"><span><b>${S.dpPub?'Liberada':'Bloqueada'}</b> · ${S.dpPub?'Los concursantes ven la Despensa.':'Los concursantes todavía no ven esta pestaña.'}</span><button class="btn ${S.dpPub?'':'primary'}" data-dplock="1">${S.dpPub?'Volver a bloquear':'Liberar a los concursantes'}</button></div>`}<div class="dp-grid">${cards}</div></div></section>`;
 }
 function vT1(){
   const tierTxt={falso:'Rumor falso',vago:'Rumor vago',ok:'Gusto',det:'Con detalle',man:'Gusto + manía'};
