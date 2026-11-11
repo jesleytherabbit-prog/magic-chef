@@ -277,9 +277,14 @@ table.ttab .who img[hidden]{display:none}
 .dp-n{position:absolute;top:6px;left:8px;font-family:var(--display);font-size:11px;color:var(--soft)}
 .dp.tomado{border-color:var(--line);background:transparent}
 .dp.tomado b{color:var(--soft);font-weight:500}
-.dp.oculto{border-style:dashed;background:transparent}
-.dp.oculto b{color:var(--soft);font-weight:500;letter-spacing:.2em}
-.dp-qm{width:84px;height:84px;display:grid;place-items:center;border:2px dashed var(--gold);border-radius:50%;font-family:var(--display);font-size:46px;line-height:1;color:var(--soft)}
+.dp{font:inherit;color:inherit;cursor:pointer;width:100%}
+.dp:hover{border-color:var(--terra)}
+.dp.sel{border-color:var(--terra);box-shadow:0 0 0 2px var(--terra)}
+.dp-det{position:sticky;bottom:10px;display:flex;gap:14px;align-items:flex-start;margin-top:14px;padding:14px 38px 14px 14px;background:var(--card);border:2px solid var(--terra);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.25);z-index:5}
+.dp-det h3{margin:2px 0 6px;font-size:17px}
+.dp-det p{margin:4px 0}
+.dp-det .dp-x{position:absolute;top:8px;right:10px;font-size:16px}
+@media (max-width:520px){.dp-det{flex-direction:column;align-items:center;text-align:center}}
 .dp-q{display:flex;align-items:center;gap:5px;margin-top:auto;font-size:13px;color:var(--terra-ink,var(--terra))}
 .dp-q img{width:26px;height:26px;border-radius:50%;object-fit:cover;border:1px solid var(--gold)}
 @media (prefers-reduced-motion:reduce){.dp .ingimg{transition:none}}
@@ -1054,13 +1059,14 @@ function vTurnos(){
   return `<section class="view">${SEC.map(([k,t,n,c,fn])=>{ const on=String(abierto)===String(k); const act=k===S.turno||(k==='mas'&&S.turno>3);
     return `<div class="acc ${on?'on':''}"><button class="acc-h" data-topen="${k}" aria-expanded="${on}"><span class="acc-c" aria-hidden="true"></span><b>${t}</b><span class="acc-n">${n}</span>${act?'<span class="acc-act">Turno actual</span>':''}<span class="acc-e">${c}</span></button>${on?`<div class="acc-b">${fn()}</div>`:''}</div>`; }).join('')}</section>`;
 }
+let DP_SEL=0;
 function vDespensa(){
   const {tom}=cajaMapa(); const n=Object.keys(tom).length;
-  const jug=S.modo==='jugador';
   const cards=INGR.map(r=>{ const k=r[0], id=tom[k];
-    if(jug&&!id) return `<div class="dp oculto" title="Todavía nadie lo ha sacado"><span class="dp-n">${k}</span><span class="dp-qm" aria-hidden="true">?</span><b>???</b></div>`;
-    return `<div class="dp ${id?'tomado':''}" title="${esc(r[2])}"><span class="dp-n">${k}</span>${ingImg(k,84)||''}<b>${esc(r[1])}</b>${id?`<span class="dp-q"><img alt="" src="${foto(id)}"><span>${esc(BY[id].nombre.split(' ')[0])}</span></span>`:''}</div>`; }).join('');
-  return `<section class="view"><div class="panel"><div class="eyebrow">Ronda 1 · La Caja Misteriosa</div><h2>La despensa</h2><p class="sub">${n} de 50 ingredientes ya tienen dueño. Si tu número está tomado, pasas al siguiente libre.${jug?' Los ingredientes sin dueño siguen ocultos hasta que alguien los saque.':''}</p>${S.modo==='jugador'?'':`<div class="dp-lock ${S.dpPub?'on':''}"><span><b>${S.dpPub?'Liberada':'Bloqueada'}</b> · ${S.dpPub?'Los concursantes ven la Despensa.':'Los concursantes todavía no ven esta pestaña.'}</span><button class="btn ${S.dpPub?'':'primary'}" data-dplock="1">${S.dpPub?'Volver a bloquear':'Liberar a los concursantes'}</button></div>`}<div class="dp-grid">${cards}</div></div></section>`;
+    return `<button type="button" class="dp ${id?'tomado':''} ${DP_SEL===k?'sel':''}" data-dpsel="${k}" aria-pressed="${DP_SEL===k}" title="${esc(r[1])}: toca para ver la tirada"><span class="dp-n">${k}</span>${ingImg(k,84)||''}<b>${esc(r[1])}</b>${id?`<span class="dp-q"><img alt="" src="${foto(id)}"><span>${esc(BY[id].nombre.split(' ')[0])}</span></span>`:''}</button>`; }).join('');
+  const sel=DP_SEL?INGR.find(r=>r[0]===DP_SEL):null; const dueno=sel?tom[sel[0]]:null;
+  const det=sel?`<div class="dp-det" role="region" aria-label="Detalle del ingrediente"><button type="button" class="xbtn dp-x" data-dpsel="0" aria-label="Cerrar">✕</button>${ingImg(sel[0],92)||''}<div><div class="eyebrow">Ingrediente nº ${sel[0]}${dueno?' · lo tiene '+esc(BY[dueno].nombre.split(' ')[0]):' · sin dueño todavía'}</div><h3>${esc(sel[1])}</h3><p>${esc(sel[2])}</p><p><b>Para domarlo:</b> ${esc(sel[3])} contra <b>${sel[4]}</b>.</p><p><span class="chip pos">${sel[5]>0?'+':''}${sel[5]} Base si lo domas</span> <span class="chip neg">${sel[6]>0?'+':''}${sel[6]} Base si se rebela</span></p></div></div>`:'';
+  return `<section class="view"><div class="panel"><div class="eyebrow">Ronda 1 · La Caja Misteriosa</div><h2>La despensa</h2><p class="sub">${n} de 50 ingredientes ya tienen dueño. Si tu número está tomado, pasas al siguiente libre. Toca un ingrediente para ver qué tirada pide y qué hace.</p>${S.modo==='jugador'?'':`<div class="dp-lock ${S.dpPub?'on':''}"><span><b>${S.dpPub?'Liberada':'Bloqueada'}</b> · ${S.dpPub?'Los concursantes ven la Despensa.':'Los concursantes todavía no ven esta pestaña.'}</span><button class="btn ${S.dpPub?'':'primary'}" data-dplock="1">${S.dpPub?'Volver a bloquear':'Liberar a los concursantes'}</button></div>`}<div class="dp-grid">${cards}</div>${det}</div></section>`;
 }
 function vT1(){
   const tierTxt={falso:'Rumor falso',vago:'Rumor vago',ok:'Gusto',det:'Con detalle',man:'Gusto + manía'};
@@ -1492,6 +1498,7 @@ document.addEventListener('click',e=>{
   if(b.id==='foroImp'){ importarForo(); return; }
   if(b.id==='cloudNow'){ if(CLOUD.ready) cloudSave(); else cloudLoadMaster(); return; }
   if(b.id==='lockBtn'){ save(); clearTimeout(CLOUD.timer); (CLOUD.ready?cloudSave():Promise.resolve()).finally(()=>{ try{ sessionStorage.removeItem('mc-master'); sessionStorage.removeItem('mc-pin'); }catch(e){} location.reload(); }); return; }
+  if(b.dataset.dpsel!==undefined){ const k=Number(b.dataset.dpsel); DP_SEL=(DP_SEL===k)?0:k; render(); return; }
   if(b.dataset.dplock){ S.dpPub=!S.dpPub; save(); render(); toast(S.dpPub?'Despensa liberada':'Despensa bloqueada'); return; }
   if(b.id==='fimpGet'){ traerFichas(); return; }
   if(b.dataset.fapl){ const n=fichaAplicar(b.dataset.fapl); render(); toast(n?`${n} cambios aplicados a ${BY[b.dataset.fapl].nombre.split(' ')[0]}`:'Nada marcado para aplicar'); return; }
