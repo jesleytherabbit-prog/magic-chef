@@ -331,6 +331,82 @@ table.work.r2-t th[scope=row]{background:var(--card);color:inherit;font-family:i
 .dp.r2c{padding-top:24px;min-height:140px}
 .dp.r2c:not(.r2-con){opacity:.6}
 @media (max-width:640px){.r2-sc{justify-items:start;text-align:left;margin-left:0}}
+.mcp{position:relative;display:block;width:100%;max-width:340px;margin:0 auto;line-height:0;isolation:isolate}
+.mcp img{display:block;width:100%;height:auto;image-rendering:pixelated;transition:filter .4s}
+.mcp .fx{position:absolute;left:0;top:0;right:0;bottom:0;pointer-events:none;overflow:visible}
+.mcp .fx span{position:absolute}
+.mcp .s,.mcp .f,.mcp .o{display:none}
+
+/* ---------- Estrellitas (cruces de píxeles) ---------- */
+.mcp .s{width:7px;height:7px;background:#FFD54A;
+  box-shadow:7px 0 #FFD54A,-7px 0 #FFD54A,0 7px #FFD54A,0 -7px #FFD54A;
+  opacity:0;animation:mcp-brilla 2.4s steps(5) infinite}
+.mcp .s:nth-child(even){background:#fff;box-shadow:7px 0 #fff,-7px 0 #fff,0 7px #fff,0 -7px #fff,0 0 0 1px rgba(255,200,60,.0)}
+.mcp .s1{left:14%;top:28%;animation-delay:0s}
+.mcp .s2{left:80%;top:22%;animation-delay:-.7s}
+.mcp .s3{left:50%;top:6%;animation-delay:-1.4s}
+.mcp .s4{left:90%;top:58%;animation-delay:-.3s;animation-duration:2.9s}
+.mcp .s5{left:6%;top:62%;animation-delay:-1.9s;animation-duration:2.9s}
+.mcp .s6{left:66%;top:40%;animation-delay:-1.1s;animation-duration:2.1s}
+.mcp .s7{left:30%;top:10%;animation-delay:-2.1s;animation-duration:2.6s}
+.mcp .s8{left:38%;top:48%;animation-delay:-.5s;animation-duration:2.2s}
+.mcp .s9{left:72%;top:84%;animation-delay:-1.6s;animation-duration:2.7s}
+@keyframes mcp-brilla{0%{opacity:0;transform:scale(.3)}30%{opacity:1;transform:scale(1)}55%{opacity:1;transform:scale(.7)}100%{opacity:0;transform:scale(.3)}}
+
+.mcp-e1 .s1,.mcp-e1 .s2,.mcp-e1 .s3{display:block}
+.mcp-e2 .s1,.mcp-e2 .s2,.mcp-e2 .s3,.mcp-e2 .s4,.mcp-e2 .s5,.mcp-e2 .s6{display:block}
+.mcp-e3 .s{display:block}
+.mcp-e1 img{filter:drop-shadow(0 0 4px rgba(255,226,122,.45))}
+.mcp-e2 img{animation:mcp-glow 2.6s ease-in-out infinite}
+.mcp-e3 img{animation:mcp-glow 1.8s ease-in-out infinite}
+@keyframes mcp-glow{0%,100%{filter:drop-shadow(0 0 3px rgba(255,226,122,.4))}50%{filter:drop-shadow(0 0 12px rgba(255,226,122,.95)) brightness(1.06)}}
+
+/* ---------- Moscas (cuerpo y alas de píxeles) ---------- */
+.mcp .f{width:8px;height:8px;background:#1b1410;
+  box-shadow:-7px -5px 0 -1px rgba(190,220,255,.95),7px -5px 0 -1px rgba(190,220,255,.95);
+  animation:mcp-v1 4.2s linear infinite,mcp-ala .14s steps(1) infinite}
+.mcp .f1{left:30%;top:28%}
+.mcp .f2{left:62%;top:20%;animation-name:mcp-v2,mcp-ala;animation-duration:3.4s,.14s;animation-delay:-1s,0s}
+.mcp .f3{left:48%;top:46%;animation-duration:5.1s,.14s;animation-delay:-2.2s,0s}
+.mcp .f4{left:18%;top:52%;animation-name:mcp-v2,mcp-ala;animation-duration:4.6s,.14s;animation-delay:-.6s,0s}
+.mcp .f5{left:76%;top:50%;animation-duration:3.8s,.14s;animation-delay:-3s,0s}
+.mcp .f6{left:40%;top:10%;animation-name:mcp-v2,mcp-ala;animation-duration:5.4s,.14s;animation-delay:-1.8s,0s}
+@keyframes mcp-v1{0%{transform:translate(0,0)}12%{transform:translate(34px,-14px)}25%{transform:translate(58px,8px)}40%{transform:translate(22px,26px)}55%{transform:translate(-26px,12px)}70%{transform:translate(-44px,-14px)}85%{transform:translate(-10px,-30px)}100%{transform:translate(0,0)}}
+@keyframes mcp-v2{0%{transform:translate(0,0)}15%{transform:translate(-30px,18px)}30%{transform:translate(-8px,-24px)}48%{transform:translate(40px,-10px)}62%{transform:translate(52px,20px)}78%{transform:translate(14px,32px)}100%{transform:translate(0,0)}}
+@keyframes mcp-ala{0%{box-shadow:-7px -5px 0 -1px rgba(190,220,255,.95),7px -5px 0 -1px rgba(190,220,255,.95)}50%{box-shadow:-7px 0 0 -1px rgba(190,220,255,.95),7px 0 0 -1px rgba(190,220,255,.95)}}
+
+.mcp-m1 .f1,.mcp-m1 .f2,.mcp-m1 .f3{display:block}
+.mcp-m2 .f{display:block}
+
+/* ---------- Mal olor (ondas verdes que suben) ---------- */
+.mcp .o{width:6px;height:6px;background:#7FA82C;
+  box-shadow:6px 6px #7FA82C,0 12px #7FA82C,6px 18px #7FA82C,0 24px #7FA82C,6px 30px #7FA82C;
+  opacity:0;animation:mcp-sube 2.6s ease-in infinite}
+.mcp .o1{left:28%;top:34%}
+.mcp .o2{left:46%;top:26%;animation-delay:-.9s}
+.mcp .o3{left:64%;top:34%;animation-delay:-1.7s}
+.mcp .o4{left:38%;top:30%;animation-delay:-2.2s;animation-duration:3s}
+@keyframes mcp-sube{0%{transform:translateY(16px);opacity:0}25%{opacity:.95}100%{transform:translateY(-44px);opacity:0}}
+.mcp-m1 .o1,.mcp-m1 .o2{display:block}
+.mcp-m2 .o{display:block}
+.mcp-m1 img{filter:saturate(.88) sepia(.12)}
+.mcp-m2 img{filter:saturate(.7) sepia(.3) hue-rotate(-10deg) brightness(.92)}
+
+/* ---------- Si el lector prefiere menos movimiento ---------- */
+@media (prefers-reduced-motion:reduce){
+  .mcp .s,.mcp .f,.mcp .o,.mcp img{animation:none!important}
+  .mcp .s{opacity:1}
+  .mcp .o{opacity:.7}
+}
+.pl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin-top:12px}
+.pl-card{background:var(--card2);border:1px solid var(--gold);border-radius:10px;padding:12px 10px;text-align:center}
+.pl-card .mcp{max-width:200px}
+.pl-vacio{display:grid;place-items:center;height:130px;border:2px dashed var(--line);border-radius:8px;color:var(--soft);font-size:14px;line-height:1.2;padding:8px}
+.pl-quien{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:8px;font-family:var(--display);font-size:12px;letter-spacing:.04em}
+.pl-quien img{width:26px;height:26px;border-radius:50%;object-fit:cover;object-position:center top;border:1px solid var(--gold)}
+.pl-nom{font-style:italic;color:var(--soft);font-size:15px;line-height:1.2;margin-top:2px}
+.pl-est{font-size:17px;letter-spacing:.08em;color:var(--gold);margin-top:3px}
+.pl-card input{width:100%;margin-top:6px;font-size:14px}
 </style>
 
 <div class="wrap">
@@ -427,11 +503,11 @@ const ST_TXT={pend:'Pendiente',rap:'Rápido',nor:'A tiempo',len:'Lento',fj:'Falt
 const ST_COD={pend:'·',rap:'R',nor:'N',len:'L',fj:'FJ',fi:'FI',sp:'SP'};
 const ST_COL={pend:'mute',rap:'ok',nor:'gold',len:'warn',fj:'gold-soft',fi:'bad',sp:'line'};
 const MST=['pend','Y','Z','X','F']; const MST_TXT={pend:'Sin marcar',Y:'Posteó con tirada',Z:'Posteó sin tirada',X:'Posteó con faltas',F:'No posteó'}; const MST_COD={pend:'·',Y:'✓',Z:'Z',X:'X',F:'F'};
-function blank(){ return {turno:1,total:20,tab:'pabellon',ronda:'R1',posts:{},t1:{},rondas:{},cuchara:{},secretos:JSON.parse(JSON.stringify(DEF_SECRETOS)),renuncia:{},ejemplo:false,modo:'master',yo:'irina',tabJ:'mi',calc:{fase:'base',mod:'',dado:'',otros:''},caja:{},fu:{},fsel:'logan',mt:{},cfg:{cierre:true,sinPJ:true,desc:10},pg:pgDef()}; }
+function blank(){ return {turno:1,total:20,tab:'pabellon',ronda:'R1',posts:{},t1:{},rondas:{},cuchara:{},secretos:JSON.parse(JSON.stringify(DEF_SECRETOS)),renuncia:{},ejemplo:false,modo:'master',yo:'irina',tabJ:'mi',calc:{fase:'base',mod:'',dado:'',otros:''},caja:{},fu:{},fsel:'logan',mt:{},cfg:{cierre:true,sinPJ:true,desc:10},pg:pgDef(),platos:{}}; }
 function leerLocal(k){ try{ return JSON.parse(localStorage.getItem(k)); }catch(e){ return null; } }
 let S=leerLocal(UNLOCK?KEY:KEY_PUB);
 if(!S){ S=blank(); if(!UNLOCK){ const v=leerLocal(KEY); if(v&&v.yo) S.yo=v.yo; } } // arranca vacío: turno 1, nadie posteó
-function normalizar(){ S=Object.assign(blank(),S); S.tab=S.tab||'pabellon'; if(['turno1','turno2','tabla'].includes(S.tab)) S.tab='turnos'; S.modo=UNLOCK?(S.modo||'master'):'jugador'; S.yo=S.yo||'irina'; S.tabJ=S.tabJ||'mi'; S.calc=S.calc||{fase:'base',mod:'',dado:'',otros:''}; S.caja=S.caja||{}; S.fu=S.fu||{}; S.fsel=S.fsel||'logan'; S.mt=S.mt||{}; S.cfg=Object.assign({cierre:true,sinPJ:true,desc:10},S.cfg||{}); S.pg=pgNorm(S.pg);
+function normalizar(){ S=Object.assign(blank(),S); S.tab=S.tab||'pabellon'; if(['turno1','turno2','tabla'].includes(S.tab)) S.tab='turnos'; S.modo=UNLOCK?(S.modo||'master'):'jugador'; S.yo=S.yo||'irina'; S.tabJ=S.tabJ||'mi'; S.calc=S.calc||{fase:'base',mod:'',dado:'',otros:''}; S.caja=S.caja||{}; S.fu=S.fu||{}; S.fsel=S.fsel||'logan'; S.mt=S.mt||{}; S.cfg=Object.assign({cierre:true,sinPJ:true,desc:10},S.cfg||{}); S.pg=pgNorm(S.pg); S.platos=S.platos||{};
 Object.values(S.posts||{}).forEach(P=>Object.keys(P).forEach(k=>{ if(P[k]==='aus') P[k]='fi'; }));
 if(S.ejemplo){ const keep={yo:S.yo}; S=blank(); S.modo=UNLOCK?'master':'jugador'; Object.assign(S,keep); } // restos de los datos de prueba: se descartan
 if(UNLOCK) Object.values(S.t2||{}).forEach(x=>{ delete x.oculto; }); } // «oculto» es solo de la copia pública
@@ -748,6 +824,32 @@ function exportR2Par(){ const R=r2(); if(!R) return ''; const M=r2Mapa(); let t=
 function exportR2Res(){ const R=r2(); if(!R) return ''; const gan=r2Ganadores(); let t=`[b]${R.titulo||'Ronda 2'} · Veredicto[/b]\n\n`;
   R.pares.map((p,i)=>({p,i,...r2Par(i)})).sort((a,b)=>b.cli-a.cli).forEach(x=>{ t+=`• [b]${x.truck?x.truck.nombre:'—'}[/b] (${BY[x.p.a]?.nombre||'—'} y ${BY[x.p.b]?.nombre||'—'}): ${x.cli} clientes satisfechos = [b]${x.st} Estrellas[/b]${gan.includes(x.i)?' · [b]Cuchara de Oro[/b]':''}\n`; }); return t; }
 
+// ---------------------------------------------------------------- platos con efectos (moscas o estrellitas)
+const PL_FX='<span class="fx">'+[1,2,3,4,5,6,7,8,9].map(n=>`<span class="s s${n}"></span>`).join('')+[1,2,3,4,5,6].map(n=>`<span class="f f${n}"></span>`).join('')+[1,2,3,4].map(n=>`<span class="o o${n}"></span>`).join('')+'</span>';
+// estrellas de la ronda (0-9): 0-1 muchas moscas, 2-3 unas moscas, 4-5 normal, 6-7 estrellitas, 8 más brillo, 9 lluvia
+function plNivel(st){ if(st==null) return ''; const e=Math.max(0,Math.min(9,Math.round(st))); return e<=1?'mcp-m2':e<=3?'mcp-m1':e<=5?'':e<=7?'mcp-e1':e===8?'mcp-e2':'mcp-e3'; }
+const PL_TXT={'mcp-m2':'Apesta: nube de moscas','mcp-m1':'Unas moscas','':'Plato normal','mcp-e1':'Estrellitas','mcp-e2':'Más estrellitas y brillo','mcp-e3':'Lluvia de estrellas'};
+function pl(r){ S.platos=S.platos||{}; const o=S.platos[r]=S.platos[r]||{}; o.img=o.img||{}; o.nom=o.nom||{}; return o; }
+function plPlato(url,lv,alt){ return url?`<div class="mcp${lv?' '+lv:''}"><img src="${esc(url)}" alt="${esc(alt||'Plato')}" loading="lazy">${PL_FX}</div>`:`<div class="pl-vacio">Sin imagen todavía</div>`; }
+let PL_SEL='';
+function vPlatos(){ const r=PL_SEL&&RONDAS[PL_SEL]?PL_SEL:(RONDAS[S.ronda]?S.ronda:'R1'); const P=pl(r);
+  const cards=PJS.map(p=>{ const url=imgurURL(P.img[p.id]); const k=rowCalc(p.id,r); const st=(k.tiene||k.bonus)?Math.min(9,k.stars):null; const lv=plNivel(st);
+    return `<div class="pl-card">${plPlato(url,lv,'Plato de '+p.nombre)}<div class="pl-quien"><img alt="" src="${foto(p.id)}"><span>${esc(p.nombre.split(' ')[0])}</span></div>
+      <div class="pl-est">${st==null?'<span class="mini">sin dados</span>':'★'.repeat(Math.min(3,Math.ceil(st/3)))+' <span class="mini">'+st+'/9 · '+PL_TXT[lv]+'</span>'}</div>
+      <input type="text" data-pl="${p.id}|img" value="${esc(P.img[p.id]||'')}" placeholder="Enlace de imgur" aria-label="Imagen del plato de ${esc(p.nombre)}">
+      <input type="text" data-pl="${p.id}|nom" value="${esc(P.nom[p.id]||'')}" placeholder="Nombre del plato" aria-label="Nombre del plato de ${esc(p.nombre)}"></div>`; }).join('');
+  const hay=PJS.filter(p=>imgurURL(P.img[p.id])).length;
+  return `<section class="view"><div class="panel"><div class="eyebrow">Galería</div><h2>Platos</h2>
+   <p class="sub">Pega el enlace de imgur de cada plato. El efecto sale solo de las Estrellas de la ronda: moscas si fue mal, estrellitas si fue bien. Como el efecto delata el resultado, <b>no publiques hasta el veredicto</b>.</p>
+   <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:end;margin-top:10px"><label style="display:block">Ronda<select data-plr="1">${Object.entries(RONDAS).map(([k,v])=>`<option value="${k}" ${k===r?'selected':''}>${esc(v.n)}</option>`).join('')}</select></label></div>
+   <div class="dp-lock ${P.pub?'on':''}"><span><b>${P.pub?'Publicada':'Oculta'}</b> · ${P.pub?'Los concursantes ven los platos de esta ronda.':'Los concursantes no ven los platos de esta ronda.'}${P.pub&&!hay?' <span class="mini">(sin imágenes cargadas: no se muestra nada)</span>':''}</span><button class="btn ${P.pub?'':'primary'}" data-plpub="${r}">${P.pub?'Volver a ocultar':'Publicar esta ronda'}</button></div>
+   <div class="pl-grid">${cards}</div></div></section>`; }
+function vPlatosJ(){ const rs=Object.keys(RONDAS).filter(r=>S.platos?.[r]?.pub&&PJS.some(p=>S.platos[r].img?.[p.id])).reverse();
+  if(!rs.length) return `<section class="view"><div class="panel"><h2>Platos</h2><p class="sub">Todavía no hay platos publicados.</p></div></section>`;
+  return `<section class="view">${rs.map(r=>{ const P=S.platos[r]; return `<div class="panel" style="margin-top:0"><div class="eyebrow">${esc(RONDAS[r].n)}</div><h2>Los platos del concurso</h2><div class="pl-grid">${PJS.filter(p=>imgurURL(P.img[p.id])).map(p=>{ const lv=P.lv?.[p.id]||''; const st=P.st?.[p.id];
+      return `<div class="pl-card">${plPlato(imgurURL(P.img[p.id]),lv,'Plato de '+p.nombre)}<div class="pl-quien"><img alt="" src="${foto(p.id)}"><span>${esc(p.nombre.split(' ')[0])}</span></div>${P.nom?.[p.id]?`<div class="pl-nom">${esc(P.nom[p.id])}</div>`:''}${st!=null?`<div class="pl-est" title="${st} de 9 estrellas">${'★'.repeat(Math.min(3,Math.ceil(st/3)))}</div>`:''}</div>`; }).join('')}</div></div>`; }).join('<div style="height:16px"></div>')}</section>`; }
+function platosHay(){ return Object.keys(RONDAS).some(r=>S.platos?.[r]?.pub&&PJS.some(p=>S.platos[r].img?.[p.id])); }
+
 // ---------------------------------------------------------------- páginas públicas (Fogón y Clasificación)
 // Viven en otro documento de la nube. Mientras estén ocultas, ese documento no lleva ningún dato: solo {vis:false}.
 const DOC_PAG='MC-MAGICCHEF-PAGINAS';
@@ -1004,7 +1106,7 @@ document.addEventListener('click',e=>{
   render();
 });
 
-const TABS=[['pabellon','Pabellón'],['turnos','Turnos'],['despensa','Despensa'],['rondas','Rondas y Estrellas'],['mochila','Mochilas'],['fichas','Fichas'],['asistencia','Asistencia'],['recompensas','Recompensas'],['jurado','Fichas secretas'],['paginas','Páginas']];
+const TABS=[['pabellon','Pabellón'],['turnos','Turnos'],['despensa','Despensa'],['rondas','Rondas y Estrellas'],['mochila','Mochilas'],['fichas','Fichas'],['asistencia','Asistencia'],['recompensas','Recompensas'],['jurado','Fichas secretas'],['paginas','Páginas'],['platos','Platos']];
 function renderTabs(){ $('#tabs').innerHTML=TABS.map(([k,n])=>`<button role="tab" aria-selected="${S.tab===k}" data-tab="${k}">${n}</button>`).join(''); }
 function render(){
   const tws=[...document.querySelectorAll('.tw')].map(e=>[e.scrollLeft,e.scrollTop]); const wy=window.scrollY;
@@ -1019,8 +1121,8 @@ function render0(){ aplicarPuestos(); $('#tNum').textContent=S.turno; $('#tTot')
   const ys=$('#yoSel'); ys.hidden=!jug; ys.innerHTML=PJS.map(p=>`<option value="${p.id}" ${p.id===S.yo?'selected':''}>${esc(p.nombre)}</option>`).join('');
   $('#tPrev').hidden=jug; $('#tNext').hidden=jug;
   if(GATE&&!UNLOCK){ $('#tabs').innerHTML=''; $('#view').innerHTML=`<section class="view"><div class="panel gate"><div class="eyebrow">Solo para el máster</div><h2>Contraseña</h2><p class="sub">La parte del máster tiene los secretos del jurado y las cuentas.</p><input type="password" inputmode="numeric" id="passIn" autocomplete="off" aria-label="Contraseña"><div><button class="btn primary" id="passGo">Entrar</button> <button class="btn" data-modo="jugador">Volver</button></div><p class="mini" id="passMsg"></p></div></section>`; setTimeout(()=>$('#passIn')?.focus(),0); return; }
-  if(jug){ document.querySelector('.wrap').classList.remove('ancho'); const r2ok=!!(S.r2pub&&r2()); if(!S.dpPub&&S.tabJ==='despensa') S.tabJ='mi'; if(!r2ok&&S.tabJ==='r2') S.tabJ='mi'; $('#tabs').innerHTML=TABS_J.filter(([k])=>(k!=='despensa'||S.dpPub)&&(k!=='r2'||r2ok)).map(([k,n])=>`<button role="tab" aria-selected="${S.tabJ===k}" data-tabj="${k}">${k==='r2'?esc(S.r2.tab||S.r2.titulo||n):n}</button>`).join(''); $('#view').innerHTML=({mi:vMi,mificha:vMiFicha,r2:vR2Pub,despensa:vDespensa,pabpub:vPabPub,clas:vClas}[S.tabJ]||vMi)(); }
-  else { document.querySelector('.wrap').classList.toggle('ancho',['turnos','rondas','asistencia'].includes(S.tab)); renderTabs(); $('#view').innerHTML=({turnos:vTurnos,despensa:vDespensa,pabellon:vPab,rondas:vRondas,mochila:vMochila,fichas:vFichas,asistencia:vAsis,recompensas:vRec,jurado:vJurado,paginas:vPaginas}[S.tab])(); }
+  if(jug){ document.querySelector('.wrap').classList.remove('ancho'); const r2ok=!!(S.r2pub&&r2()); if(!S.dpPub&&S.tabJ==='despensa') S.tabJ='mi'; if(!r2ok&&S.tabJ==='r2') S.tabJ='mi'; const plok=platosHay(); if(!plok&&S.tabJ==='platos') S.tabJ='mi'; $('#tabs').innerHTML=TABS_J.filter(([k])=>(k!=='despensa'||S.dpPub)&&(k!=='platos'||plok)&&(k!=='r2'||r2ok)).map(([k,n])=>`<button role="tab" aria-selected="${S.tabJ===k}" data-tabj="${k}">${k==='r2'?esc(S.r2.tab||S.r2.titulo||n):n}</button>`).join(''); $('#view').innerHTML=({mi:vMi,mificha:vMiFicha,r2:vR2Pub,despensa:vDespensa,platos:vPlatosJ,pabpub:vPabPub,clas:vClas}[S.tabJ]||vMi)(); }
+  else { document.querySelector('.wrap').classList.toggle('ancho',['turnos','rondas','asistencia'].includes(S.tab)); renderTabs(); $('#view').innerHTML=({turnos:vTurnos,despensa:vDespensa,pabellon:vPab,rondas:vRondas,mochila:vMochila,fichas:vFichas,asistencia:vAsis,recompensas:vRec,jurado:vJurado,paginas:vPaginas,platos:vPlatos}[S.tab])(); }
   save(); if(CLOUD.st) cloudMsg(CLOUD.st,CLOUD.bad); }
 
 function vPab(){
@@ -1414,7 +1516,7 @@ function vJurado(){
 }
 
 // ---------------------------------------------------------------- vista del concursante
-const TABS_J=[['mi','Mi puesto'],['mificha','Mi ficha'],['r2','Ronda 2'],['despensa','Despensa'],['pabpub','El pabellón'],['clas','Clasificación']];
+const TABS_J=[['mi','Mi puesto'],['mificha','Mi ficha'],['r2','Ronda 2'],['despensa','Despensa'],['platos','Platos'],['pabpub','El pabellón'],['clas','Clasificación']];
 function knownMods(id){ return allEffect(id); } // todo: ventajas y penalizadores (el Turno 2 solo llega publicado)
 function vMi(){
   const p=BY[S.yo]; const P=S.posts[S.turno]||{}; const st=P[p.id]||'pend';
@@ -1505,6 +1607,7 @@ document.addEventListener('click',e=>{
   if(b.id==='dcCopy'){ copy($('#dcTxt')?.value||avisoDiscord()); return; }
   if(b.id==='dcRe'){ const ta=$('#dcTxt'); if(ta) ta.value=avisoDiscord(); toast('Aviso actualizado'); return; }
   if(b.id==='r2Load'){ r2Cargar($('#r2Txt')?.value||''); return; }
+  if(b.dataset.plpub){ const P=pl(b.dataset.plpub); P.pub=!P.pub; save(); render(); toast(P.pub?'Platos publicados':'Platos ocultos'); return; }
   if(b.id==='pgFog'){ S.pg.fogon.vis=!S.pg.fogon.vis; save(); render(); toast(S.pg.fogon.vis?'Fogón publicado':'Fogón oculto'); return; }
   if(b.id==='pgClas'){ S.pg.clas.vis=!S.pg.clas.vis; save(); render(); toast(S.pg.clas.vis?'Clasificación publicada':'Clasificación oculta'); return; }
   if(b.dataset.pgcopy){ copy(b.dataset.pgcopy); return; }
@@ -1548,6 +1651,7 @@ document.addEventListener('keydown',e=>{ if(e.key==='Enter'&&e.target.id==='pass
 function estadoPublico(){ const c=JSON.parse(JSON.stringify(S)); delete c._m; delete c.tablas; delete c.edic; delete c.secretos; delete c.modo; delete c.yo; delete c.tabJ; delete c.calc; delete c.tab; delete c.cfg; delete c.fimp; delete c.pg;
   Object.values(c.fu||{}).forEach(u=>{ delete u.notas; }); Object.values(c.caja||{}).forEach(x=>{ delete x.avisos; });
   if(!S.r2pub||!r2()){ delete c.r2; delete c.r2res; } else if(!S.r2res){ delete c.r2.tir; c.r2.trucks.forEach(t=>{ delete t.pen; }); } // la Ronda 2 sale solo cuando se publica
+  Object.keys(c.platos||{}).forEach(r=>{ const P=c.platos[r]; if(!RONDAS[r]) return; if(!P||!P.pub){ delete c.platos[r]; return; } P.lv={}; P.st={}; PJS.forEach(p=>{ if(!P.img?.[p.id]) return; const k=rowCalc(p.id,r); P.st[p.id]=(k.tiene||k.bonus)?Math.min(9,k.stars):null; P.lv[p.id]=plNivel(P.st[p.id]); }); });
   if(!S.t2pub) delete c.t2; // bloqueo del Turno 2: hasta que la máster publique, no sale nada
   else { c.t2=c.t2||{}; PJS.forEach(p=>{ const k=t2Calc(p.id), x=c.t2[p.id]=c.t2[p.id]||{}; x.s=k.sobre;
     if(k.res==='lee'){ x.v=!!k.verdad; x.det=k.eG.ge>=1?k.det:''; } else { delete x.v; delete x.det; x.oculto=true; } }); }
@@ -1582,6 +1686,8 @@ document.addEventListener('change',e=>{
   else if(d.mf){ (S.mt[d.mf]=S.mt[d.mf]||{c:'X'}).f=val; }
   else if(d.pz){ (S.pizarra=S.pizarra||{})[d.pz]=el.value; save(); const pv=document.getElementById('pzPrev'); if(pv) pv.innerHTML=pizarra()||'<span class="mini">Vacío: los concursantes no ven nada.</span>'; return; }
   else if(d.t2){ S.t2=S.t2||{}; const r=S.t2[d.t2]=S.t2[d.t2]||{}; r[d.k]=d.k==='v'?(val==='1'):val; if(d.k==='ed'&&val===''){ delete r.fd; } }
+  else if(d.plr){ PL_SEL=el.value; render(); return; }
+  else if(d.pl){ const [id,k]=d.pl.split('|'); const r=PL_SEL&&RONDAS[PL_SEL]?PL_SEL:(RONDAS[S.ronda]?S.ronda:'R1'); pl(r)[k][id]=el.value.trim(); save(); render(); return; }
   else if(d.pgf){ S.pg.fogon[d.pgf]=el.value; if(d.pgf!=='ronda'){ save(); return; } }
   else if(d.pgfase){ S.pg.fogon.fases[d.pgfase]=el.checked; }
   else if(d.pgroll){ const i=SKN.indexOf(el.value); S.pg.fogon.rolls[d.pgroll]={hab:el.value,at:i<0?'Voluntad':ATL[SKA[i]]}; }
