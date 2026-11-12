@@ -328,6 +328,7 @@ table.work.r2-t{min-width:600px}
 table.work.r2-t th[scope=row]{background:var(--card);color:inherit;font-family:inherit;font-size:14px;letter-spacing:0;text-transform:none;white-space:normal;min-width:170px}
 .r2-in{display:flex;gap:4px}
 .r2-no{color:var(--soft);text-align:center}
+.r2-q2{display:block;margin-top:5px}.r2-q2 select{max-width:200px;font-size:12px;margin-left:2px}
 .dp.r2c{padding-top:24px;min-height:140px}
 .dp.r2c:not(.r2-con){opacity:.6}
 @media (max-width:640px){.r2-sc{justify-items:start;text-align:left;margin-left:0}}
@@ -748,7 +749,8 @@ function r2Auto(id,t){ // Atributo + Habilidad de la tirada, sacado de la ficha 
   else { const m=String(t.hab||'').match(/\((.+)\)/); const w=(m?m[1]:String(t.hab||'')).toLowerCase().slice(0,5); h=Math.max(0,...fArts(id).filter(x=>x[0].toLowerCase().includes(w)).map(x=>x[1])); }
   return {v:Number(a)+h,txt:`${t.at} ${blanco?'en blanco (0)':a} + ${t.hab} ${h}`,blanco}; }
 function r2Rol(id){ const R=r2(); if(!R) return null; const i=R.pares.findIndex(p=>p.a===id||p.b===id); if(i<0) return null; const p=R.pares[i]; return {i,par:p,rol:p.a===id?'A':'B',comp:p.a===id?p.b:p.a}; }
-function r2Tiradas(rol){ return (r2()?.tiradas||[]).filter(t=>t.rol==='AB'||t.rol===rol); }
+function r2Quien(p,t){ const q=p&&p.q&&p.q[t.k]; return q==='A'||q==='B'||q==='AB'?q:t.rol; } // quién tira: lo que eligió la pareja o, si no eligió, lo que dice la tirada
+function r2Tiradas(rol,p){ return (r2()?.tiradas||[]).filter(t=>{ const q=r2Quien(p,t); return q==='AB'||q===rol; }); }
 function r2Mapa(){ // la Cuchara elige primero; después el d15 por orden de tirada; si el camión está tomado, pasa al siguiente libre (del último vuelve al 1)
   const R=r2(); const N=R.trucks.length; const tom={},asig={};
   R.pares.forEach((p,i)=>{ const n=Number(p.elige); if(n>=1&&n<=N&&!tom[n]){ tom[n]=i+1; asig[i]=n; } });
@@ -764,7 +766,7 @@ function r2Calc(id,t,truck){ const x=S.r2.tir?.[id]?.[t.k]||{}; const au=r2Auto(
   if(x.dado===''||x.dado==null) return {...base,pend:true};
   const total=mod+Number(x.dado)+otC+pen; const g=grados(total,base.dif); return {...base,total,g,cli:g.pasa?5+10*g.ge:-5*g.gf}; }
 function r2Par(i){ const R=r2(); const p=R.pares[i]; const truck=r2Truck(i); let cli=0,hechas=0,tot=0;
-  [['A',p.a],['B',p.b]].forEach(([rol,id])=>{ if(!id||!BY[id]) return; r2Tiradas(rol).forEach(t=>{ tot++; const c=r2Calc(id,t,truck); if(!c.pend){ hechas++; cli+=c.cli; } }); });
+  [['A',p.a],['B',p.b]].forEach(([rol,id])=>{ if(!id||!BY[id]) return; r2Tiradas(rol,p).forEach(t=>{ tot++; const c=r2Calc(id,t,truck); if(!c.pend){ hechas++; cli+=c.cli; } }); });
   cli=Math.max(0,cli); return {truck,cli,st:Math.min(12,Math.floor(cli/10)),hechas,tot,completo:tot>0&&hechas===tot}; }
 function r2Ganadores(){ const R=r2(); if(!R) return []; const L=R.pares.map((p,i)=>({i,...r2Par(i)})).filter(x=>x.hechas); if(!L.length) return []; const mx=Math.max(...L.map(x=>x.cli)); return mx>0?L.filter(x=>x.cli===mx).map(x=>x.i):[]; }
 function r2Stars(id){ const r=r2Rol(id); if(!r||!(S.r2.tir)) return null; const c=r2Par(r.i); return c.hechas?c.st:null; }
@@ -783,11 +785,14 @@ function vR2(){ const R=r2();
     <div style="margin-top:8px"><button class="btn primary" id="r2Load">Cargar</button></div></div>`;
   const M=r2Mapa(); const gan=r2Ganadores(); const N=R.trucks.length; const U=R.unidad||'Destino';
   const nPar=R.pares.length, nTr=Object.keys(M.asig).length, nComp=R.pares.filter((p,i)=>r2Par(i).completo).length;
-  const celda=(id,t,truck,rol)=>{ if(t.rol!=='AB'&&t.rol!==rol) return '<td class="r2-no">—</td>'; if(!id) return '<td>—</td>'; const x=S.r2.tir?.[id]?.[t.k]||{}; const c=r2Calc(id,t,truck); const key=id+'|'+t.k;
+  const celda=(id,t,truck,rol,par)=>{ const q=r2Quien(par,t); if(q!=='AB'&&q!==rol) return '<td class="r2-no">—</td>'; if(!id) return '<td>—</td>'; const x=S.r2.tir?.[id]?.[t.k]||{}; const c=r2Calc(id,t,truck); const key=id+'|'+t.k;
     return `<td><div class="r2-in"><input type="number" data-r2t="${key}" data-k="mod" value="${x.mod??''}" placeholder="${c.au.v}" title="${esc(c.au.txt)}" aria-label="Atributo + Habilidad de ${esc(r2Nom(id))}"><input type="number" data-r2t="${key}" data-k="ot" value="${x.ot??''}" placeholder="0" title="Otros: trasfondos, Cuchara de Oro (+2)…" aria-label="Otros"><input type="number" min="1" max="10" data-r2t="${key}" data-k="dado" value="${x.dado??''}" title="Dado" aria-label="Dado"></div>
       <div class="mini">${c.pend?`${c.pen?`<span class="chip neg">${c.pen} ${esc(r2Juez(t.juez))}</span>`:''}${c.au.blanco?'<span class="warn">atributo en blanco</span>':''}`:`<b>${c.total}</b> vs ${c.dif} · <span class="chip ${c.cli>0?'pos':c.cli<0?'neg':''}">${c.cli>0?'+':''}${c.cli} clientes</span>${c.pen?` <span class="chip neg">${c.pen} ${esc(r2Juez(t.juez))}</span>`:''}`}${c.capWarn?' <span class="warn">tope +7</span>':''}</div></td>`; };
   const cards=R.pares.map((p,i)=>{ const c=r2Par(i); const tr=c.truck; const elegida=Number(p.elige)>=1;
-    const filas=R.tiradas.map(t=>`<tr><th scope="row"><b>${esc(t.n)}</b><div class="mini">${esc(t.at)} + ${esc(t.hab)} · Dif. ${t.dif}${t.juez?' · '+esc(r2Juez(t.juez)):''}</div></th>${celda(p.a,t,tr,'A')}${celda(p.b,t,tr,'B')}</tr>`).join('');
+    const nA=p.a?esc(r2Nom(p.a)):'A', nB=p.b?esc(r2Nom(p.b)):'B';
+    const filas=R.tiradas.map(t=>{ const sel=(p.q&&p.q[t.k])||''; const def=t.rol==='AB'?'los dos':(t.rol==='A'?nA:nB);
+      return `<tr><th scope="row"><b>${esc(t.n)}</b><div class="mini">${esc(t.at)} + ${esc(t.hab)} · Dif. ${t.dif}${t.juez?' · '+esc(r2Juez(t.juez)):''}</div>
+      <label class="mini r2-q2">Quién la tira <select data-r2q="${i}|${esc(t.k)}" aria-label="Quién tira ${esc(t.n)}"><option value="" ${sel===''?'selected':''}>Según el plan (${def})</option><option value="A" ${sel==='A'?'selected':''}>Solo ${nA}</option><option value="B" ${sel==='B'?'selected':''}>Solo ${nB}</option><option value="AB" ${sel==='AB'?'selected':''}>Los dos</option></select></label></th>${celda(p.a,t,tr,'A',p)}${celda(p.b,t,tr,'B',p)}</tr>`; }).join('');
     return `<div class="r2-par ${gan.includes(i)?'gana':''}"><div class="r2-h">
        <div class="r2-n">${i+1}</div>
        <div class="r2-q">${[['A',p.a],['B',p.b]].map(([rol,id])=>id?`<span class="who"><img alt="" src="${foto(id)}"><b>${esc(BY[id].nombre)}</b><span class="chip">Rol ${rol}</span></span>`:'').join('')}</div>
@@ -795,7 +800,7 @@ function vR2(){ const R=r2();
        <label class="mini">Cuchara de Oro<select data-r2p="${i}" data-k="elige" style="display:block;max-width:150px"><option value="">No la usa</option>${R.trucks.map(t=>`<option value="${t.n}" ${Number(p.elige)===Number(t.n)?'selected':''}>${t.n}. ${esc(t.nombre)}</option>`).join('')}</select></label>
        <div class="r2-tr">${tr?`${r2Img(tr,64,'float:left;margin-right:8px')}<b>${tr.n}. ${esc(tr.nombre)}</b><div class="mini">${esc(tr.comida||'')}${Number(p.d15)&&!elegida&&Number(p.d15)!==Number(tr.n)?` · sacó ${p.d15}, estaba tomado`:''}${elegida?' · elegido con la Cuchara':''}</div><div>${Object.entries(tr.pen||{}).filter(([,v])=>Number(v)).map(([j,v])=>`<span class="chip neg">${v} ${esc(r2Juez(j))}</span>`).join('')}</div>`:`<span class="mini">Esperando el d${N}</span>`}</div>
        <div class="r2-sc"><b class="num">${c.cli}</b><span>clientes</span><span class="stars">${c.st} ★</span>${gan.includes(i)?'<span class="chip pos">🥄 Cuchara de Oro</span>':''}<span class="mini">${c.hechas}/${c.tot} tiradas</span></div></div>
-     <div class="tw"><table class="work r2-t"><thead><tr><th>Tirada</th><th>${p.a?esc(r2Nom(p.a)):'—'} · A</th><th>${p.b?esc(r2Nom(p.b)):'—'} · B</th></tr></thead><tbody>${filas}</tbody></table></div></div>`; }).join('');
+     <div class="tw"><table class="work r2-t"><thead><tr><th>Tirada</th><th>${p.a?esc(r2Nom(p.a)):'—'} · A <span class="mini">${r2Tiradas('A',p).length} tiradas</span></th><th>${p.b?esc(r2Nom(p.b)):'—'} · B <span class="mini">${r2Tiradas('B',p).length} tiradas</span></th></tr></thead><tbody>${filas}</tbody></table></div></div>`; }).join('');
   const ganTxt=gan.length?gan.map(i=>`${r2Nom(R.pares[i].a)} y ${r2Nom(R.pares[i].b)}`).join(' · '):'';
   const yaCu=i=>[R.pares[i].a,R.pares[i].b].every(id=>(S.cuchara[id]||[]).some(x=>x.r==='R2'));
   const camiones=R.trucks.map((t,k)=>`<tr><td class="num">${t.n}</td><td><input type="text" data-r2c="${k}" data-k="nombre" value="${esc(t.nombre||'')}" style="width:170px"></td><td><input type="text" data-r2c="${k}" data-k="comida" value="${esc(t.comida||'')}" style="width:130px"></td>
@@ -823,8 +828,8 @@ function vR2Pub(){ const R=r2(); const U=R?.unidad||'Destino';
   const me=r2Rol(S.yo); const M=r2Mapa();
   let mine='<div class="panel"><p class="sub">No tienes pareja en esta ronda.</p></div>';
   if(me){ const tr=r2Truck(me.i); const c=r2Par(me.i); const ver=S.r2res&&S.r2.tir;
-    const lista=r2Tiradas(me.rol).map(t=>{ const k=ver?r2Calc(S.yo,t,tr):null; const au=r2Auto(S.yo,t);
-      return `<tr><td><b>${esc(t.n)}</b><div class="mini">${esc(t.at)} + ${esc(t.hab)}${t.rol==='AB'?' · la tiran los dos':''}</div></td><td class="num">${au.v}</td><td class="num">${t.dif}</td><td>${k&&!k.pend?`<b>${k.total}</b> <span class="res ${k.g.pasa?'r-det':'r-falso'}">${k.g.pasa?'Superada':'Fallada'}</span>`:'—'}</td></tr>`; }).join('');
+    const lista=r2Tiradas(me.rol,me.par).map(t=>{ const k=ver?r2Calc(S.yo,t,tr):null; const au=r2Auto(S.yo,t);
+      return `<tr><td><b>${esc(t.n)}</b><div class="mini">${esc(t.at)} + ${esc(t.hab)}${r2Quien(me.par,t)==='AB'?' · la tiran los dos':''}</div></td><td class="num">${au.v}</td><td class="num">${t.dif}</td><td>${k&&!k.pend?`<b>${k.total}</b> <span class="res ${k.g.pasa?'r-det':'r-falso'}">${k.g.pasa?'Superada':'Fallada'}</span>`:'—'}</td></tr>`; }).join('');
     mine=`<div class="panel"><div class="eyebrow">Tu pareja · Rol ${me.rol}</div><h2>${esc(BY[me.comp]?.nombre||'—')}</h2>
       <div class="me" style="margin-top:8px"><img alt="" src="${foto(me.comp)}"><div>${tr?`<div class="eyebrow">Su ${esc(U.toLowerCase())}</div>${r2Img(tr,180,'display:block;margin:6px 0')}<b>${esc(tr.nombre)}</b><div class="mini">${esc(tr.comida||'')}</div>`:`<p class="sub">Todavía no les tocó ${esc(U.toLowerCase())}.</p>`}</div></div>
       ${tr&&tr.menu?`<div class="letter" style="margin-top:10px;white-space:pre-wrap"><b>Menú</b>\n${esc(tr.menu)}</div>`:''}
@@ -867,10 +872,10 @@ function platosHay(){ return Object.keys(RONDAS).some(r=>S.platos?.[r]?.pub&&PJS
 // ---------------------------------------------------------------- páginas públicas (Fogón y Clasificación)
 // Viven en otro documento de la nube. Mientras estén ocultas, ese documento no lleva ningún dato: solo {vis:false}.
 const DOC_PAG='MC-MAGICCHEF-PAGINAS';
-const PG_URL={fogon:'https://jesleytherabbit-prog.github.io/magic-chef/fogon.html',clas:'https://jesleytherabbit-prog.github.io/magic-chef/clasificacion.html'};
-function pgDef(){ return {fogon:{vis:false,ronda:'R1',titulo:'La cocción',sub:'',fases:{base:true,toque:true,pres:false},rolls:{base:{at:'Voluntad',hab:'Arte (Cocina)'},toque:{at:'Destreza',hab:'Latrocinio'},pres:{at:'Voluntad',hab:'Estilo'}}},clas:{vis:false,rondas:{}}}; }
+const PG_URL={fogon:'https://jesleytherabbit-prog.github.io/magic-chef/fogon.html',clas:'https://jesleytherabbit-prog.github.io/magic-chef/clasificacion.html',truck:'https://jesleytherabbit-prog.github.io/magic-chef/foodtruck.html'};
+function pgDef(){ return {fogon:{vis:false,ronda:'R1',titulo:'La cocción',sub:'',fases:{base:true,toque:true,pres:false},rolls:{base:{at:'Voluntad',hab:'Arte (Cocina)'},toque:{at:'Destreza',hab:'Latrocinio'},pres:{at:'Voluntad',hab:'Estilo'}}},clas:{vis:false,rondas:{}},truck:{vis:false}}; }
 function pgNorm(x){ const d=pgDef(); x=x||{}; const f=x.fogon||{};
-  return {fogon:Object.assign(d.fogon,f,{fases:Object.assign(d.fogon.fases,f.fases||{}),rolls:Object.assign(d.fogon.rolls,f.rolls||{})}),clas:Object.assign(d.clas,x.clas||{},{rondas:Object.assign({},(x.clas||{}).rondas||{})})}; }
+  return {fogon:Object.assign(d.fogon,f,{fases:Object.assign(d.fogon.fases,f.fases||{}),rolls:Object.assign(d.fogon.rolls,f.rolls||{})}),clas:Object.assign(d.clas,x.clas||{},{rondas:Object.assign({},(x.clas||{}).rondas||{})}),truck:Object.assign(d.truck,x.truck||{})}; }
 const PG_JUEZ={base:'vael',toque:'pommeroy',pres:'tuck'};
 function pgFases(){ return ['base','toque','pres'].filter(k=>S.pg.fogon.fases[k]); }
 function pgTxt(m){ // lo que el concursante ve de cada modificador: nunca dice si un rumor era falso
@@ -884,7 +889,7 @@ function pgFogon(){ const g=S.pg.fogon, rd=g.ronda, D=RONDAS[rd].d, r2m=(rd==='R
     fases.forEach(k=>{ const rl=g.rolls[k]||{}; const au=r2Auto(p.id,{at:rl.at||'Voluntad',hab:rl.hab||'Estilo'}); const R=S.rondas[rd]?.[p.id]?.[k]||{};
       const mods=modsFor(p.id,rd,k).filter(m=>(S.t2pub||!/Rupert/.test(m.txt||''))&&!m.rat&&!m.ev).map(m=>({v:m.v,t:pgTxt(m),on:!!m.on,c:m.cond?1:0}));
       x.f[k]={mod:(R.mod!==''&&R.mod!=null)?Number(R.mod):au.v,auto:au.v,txt:au.txt,blanco:!!au.blanco,mods,extra:Number(R.extra)||0}; });
-    if(r2m){ const me=r2Rol(p.id); if(!me){ x.sinPar=true; } else { const tr=r2Truck(me.i); const L=r2Tiradas(me.rol); const U=(S.r2.unidad||'Destino').toLowerCase();
+    if(r2m){ const me=r2Rol(p.id); if(!me){ x.sinPar=true; } else { const tr=r2Truck(me.i); const L=r2Tiradas(me.rol,me.par); const U=(S.r2.unidad||'Destino').toLowerCase();
         x.fases=L.map(t=>({k:t.k,nombre:t.n,juez:r2Juez(t.juez),at:t.at,hab:t.hab,dif:Number(t.dif)||9}));
         L.forEach(t=>{ const au=r2Auto(p.id,t); const pen=r2Pen(tr,t); const R=(S.r2.tir&&S.r2.tir[p.id]&&S.r2.tir[p.id][t.k])||{}; x.f[t.k]={mod:(R.mod!==''&&R.mod!=null)?Number(R.mod):au.v,auto:au.v,txt:au.txt,blanco:au.blanco,mods:pen?[{v:pen,t:'Tu '+U+': '+tr.nombre,on:true,c:0}]:[],extra:Number(R.ot)||0}; });
         x.panel={eyebrow:'Tu pareja · Rol '+me.rol,titulo:BY[me.comp].nombre,sub:tr?(tr.nombre+(tr.comida?' · '+tr.comida:'')):'Todavía no les tocó '+U,menu:(tr&&tr.menu)||'',img:imgurURL(tr&&tr.img)||''}; } }
@@ -899,9 +904,21 @@ function pgClas(){ const c=S.pg.clas; const rs=Object.keys(RONDAS).filter(r=>c.r
   const nPrem=acct().nPrem; const ordenPrem=L.filter(r=>!S.renuncia[r.id]).slice(0,nPrem).map(r=>r.id);
   return {vis:true,nPrem,rondas:rs.map(r=>({k:r,n:RONDAS[r].n,x:r==='F'?2:1})),
     filas:L.map(r=>({id:r.id,n:r.n,tag:r.tag,img:pgImg(r.id),per:r.per,tot:r.tot,pos:r.pos,prev:prev[r.id]||0,prem:ordenPrem.indexOf(r.id)+1,sinPremio:!!S.renuncia[r.id]}))}; }
-function paginasPublico(){ const out={v:1,at:Date.now(),fogon:{vis:false},clas:{vis:false}};
+function pgTruck(){ const R=r2(); const vis=!!S.r2res; const gan=vis?r2Ganadores():[];
+  const trucks=R.trucks.map(t=>({n:t.n,nombre:t.nombre||'',comida:t.comida||'',img:imgurURL(t.img)||'',menu:t.menu||''}));
+  const pares=R.pares.map((p,i)=>{ const tr=r2Truck(i); const c=r2Par(i);
+    const tir=R.tiradas.map(t=>{ const q=r2Quien(p,t);
+      const r=[['A',p.a],['B',p.b]].filter(([rol,id])=>id&&BY[id]&&(q==='AB'||q===rol)).map(([rol,id])=>{ const b={id,rol,n:r2Nom(id)}; const x=r2Calc(id,t,tr);
+        if(!vis||x.pend) return Object.assign(b,{pend:1});
+        return Object.assign(b,{total:x.total,pasa:x.g.pasa?1:0,ge:x.g.ge,gf:x.g.gf,cli:x.cli}); });
+      return {k:t.k,n:t.n,at:t.at,hab:t.hab,dif:Number(t.dif)||9,juez:r2Juez(t.juez),r}; });
+    const m=id=>id&&BY[id]?{id,n:r2Nom(id),img:pgImg(id)}:null;
+    return {i:i+1,truck:tr?tr.n:0,a:m(p.a),b:m(p.b),tir,cli:vis?c.cli:null,st:vis?c.st:null,gana:gan.includes(i)}; });
+  return {vis:true,titulo:R.titulo||'Ronda 2',unidad:R.unidad||'Food truck',res:vis,trucks,pares}; }
+function paginasPublico(){ const out={v:1,at:Date.now(),fogon:{vis:false},clas:{vis:false},truck:{vis:false}};
   if(S.pg.fogon.vis&&(pgFases().length||(S.pg.fogon.ronda==='R2'&&r2()))) out.fogon=pgFogon();
   if(S.pg.clas.vis) out.clas=pgClas();
+  if(S.pg.truck.vis&&r2()&&S.r2pub) out.truck=pgTruck();
   return out; }
 function vPaginas(){ const g=S.pg.fogon, c=S.pg.clas, rd=g.ronda, D=RONDAS[rd].d; const habs=SKN.concat(['Arte (Cocina)']);
   const lock=(on,idb,tOn,tOff,dOn,dOff)=>`<div class="dp-lock ${on?'on':''}"><span><b>${on?tOn:tOff}</b> · ${on?dOn:dOff}</span><button class="btn ${on?'':'primary'}" id="${idb}">${on?'Volver a ocultar':'Publicar'}</button></div>`;
@@ -910,7 +927,7 @@ function vPaginas(){ const g=S.pg.fogon, c=S.pg.clas, rd=g.ronda, D=RONDAS[rd].d
       <td><span class="mini">${esc(r.at||'Voluntad')} +</span> <select data-pgroll="${k}" aria-label="Habilidad de ${FASES[k]}">${habs.map(h=>`<option ${r.hab===h?'selected':''}>${esc(h)}</option>`).join('')}</select></td><td class="num">${D[k]}</td></tr>`; }).join('');
   const nPub=pgFases().length||((g.ronda==='R2'&&r2())?1:0);
   return `<section class="view"><div class="panel"><div class="eyebrow">Páginas públicas</div><h2>Lo que ven los concursantes fuera del tracker</h2>
-    <p class="sub">Las dos páginas están <b>ocultas</b> hasta que las publiques aquí. Mientras estén ocultas, en la nube no hay ningún dato de ellas: el que abra el enlace solo ve una pantalla de espera. Se actualizan solas cada vez que el tracker guarda.</p></div>
+    <p class="sub">Las páginas están <b>ocultas</b> hasta que las publiques aquí. Mientras estén ocultas, en la nube no hay ningún dato de ellas: el que abra el enlace solo ve una pantalla de espera. Se actualizan solas cada vez que el tracker guarda.</p></div>
    <div class="panel" style="margin-top:18px"><div class="eyebrow">Turno ${S.turno}</div><h2>Página del Fogón</h2>
     <p class="sub">Cada concursante elige su nombre, ve su ingrediente, sus modificadores sumados por fase, escribe el dado del foro y recibe el total, el grado y las Estrellas más un texto para pegar en su post.</p>
     ${lock(g.vis,'pgFog','Fogón publicado','Fogón oculto','Los concursantes ya pueden abrir la página.','Nadie puede ver nada todavía.')}
@@ -922,6 +939,11 @@ function vPaginas(){ const g=S.pg.fogon, c=S.pg.clas, rd=g.ronda, D=RONDAS[rd].d
     <label style="display:block;margin-top:10px">Mensaje para los concursantes (opcional)<textarea data-pgf="sub" rows="2" style="width:100%">${esc(g.sub)}</textarea></label>
     <div class="tw" style="margin-top:12px"><table class="work"><thead><tr><th>Fase que muestra</th><th>Tirada (Atributo + Habilidad)</th><th>Dif.</th></tr></thead><tbody>${filas}</tbody></table></div>
     <p class="mini">Las tiradas son la propuesta de los Turnos 4 y 5, pendiente de tu aprobación. Las dificultades salen de la ronda elegida. El «Extra» que escribas en Rondas y Estrellas llega a la página como un chip fijo.</p></div>
+   <div class="panel" style="margin-top:18px"><div class="eyebrow">Ronda 2</div><h2>Página del Food Truck</h2>
+    <p class="sub">Una escena en pixel con el truck de cada pareja y su fila de clientes. Reproduce la jornada tirada por tirada: la fila crece o se vacía y los clientes opinan según cómo salió cada una. Muestra el cartel del truck con el link de imgur. Necesita la ronda 2 cargada y las parejas publicadas; las tiradas aparecen cuando publiques los resultados.</p>
+    ${lock(S.pg.truck.vis,'pgTruck','Food Truck publicado','Food Truck oculto','Los concursantes ya pueden abrir la página.','Nadie puede ver nada todavía.')}
+    ${S.pg.truck.vis&&!(r2()&&S.r2pub)?'<p class="mini" style="color:var(--bad)">Carga la ronda 2 y publica las parejas: sin eso la página sigue oculta.</p>':''}
+    ${enlace(PG_URL.truck)}</div>
    <div class="panel" style="margin-top:18px"><div class="eyebrow">Después de cada veredicto</div><h2>Clasificación pública</h2>
     <p class="sub">Pizarra con las Estrellas, que sube y baja puestos con animación. Solo cuenta las rondas que marques abajo.</p>
     ${lock(c.vis,'pgClas','Clasificación publicada','Clasificación oculta','Se ven las rondas marcadas.','Nadie puede ver nada todavía.')}
@@ -1875,6 +1897,7 @@ document.addEventListener('click',e=>{
   if(b.id==='r2Load'){ r2Cargar($('#r2Txt')?.value||''); return; }
   if(b.dataset.plpub){ const P=pl(b.dataset.plpub); P.pub=!P.pub; save(); render(); toast(P.pub?'Platos publicados':'Platos ocultos'); return; }
   if(b.id==='pgFog'){ S.pg.fogon.vis=!S.pg.fogon.vis; save(); render(); toast(S.pg.fogon.vis?'Fogón publicado':'Fogón oculto'); return; }
+  if(b.id==='pgTruck'){ S.pg.truck.vis=!S.pg.truck.vis; save(); render(); toast(S.pg.truck.vis?'Food Truck publicado':'Food Truck oculto'); return; }
   if(b.id==='pgClas'){ S.pg.clas.vis=!S.pg.clas.vis; save(); render(); toast(S.pg.clas.vis?'Clasificación publicada':'Clasificación oculta'); return; }
   if(b.dataset.pgcopy){ copy(b.dataset.pgcopy); return; }
   if(b.id==='r2pub'){ S.r2pub=!S.r2pub; if(!S.r2pub) S.r2res=false; save(); render(); toast(S.r2pub?'Parejas publicadas':'Ronda 2 oculta'); return; }
@@ -1964,6 +1987,7 @@ document.addEventListener('change',e=>{
   else if(d.pgclas){ S.pg.clas.rondas[d.pgclas]=el.checked; }
   else if(d.r2t&&r2()){ const [id,k]=d.r2t.split('|'); const T=S.r2.tir=S.r2.tir||{}; ((T[id]=T[id]||{})[k]=T[id][k]||{})[d.k]=val; }
   else if(d.r2p&&r2()){ const p=S.r2.pares[+d.r2p]; if(!p) return; if(d.k==='d15'&&val!==''&&(p.d15===''||p.d15==null)) p.t=Date.now(); if(d.k==='d15'&&val==='') delete p.t; p[d.k]=val; }
+  else if(d.r2q&&r2()){ const [i,k]=d.r2q.split('|'); const p=S.r2.pares[+i]; if(!p) return; p.q=p.q||{}; if(el.value==='') delete p.q[k]; else p.q[k]=el.value; }
   else if(d.r2c&&r2()){ const t=S.r2.trucks[+d.r2c]; if(!t) return; if(d.k.startsWith('pen_')){ (t.pen=t.pen||{})[d.k.slice(4)]=val===''?0:val; } else { t[d.k]=d.k==='img'?imgurURL(el.value):el.value; if(d.k==='menu'||d.k==='nombre'||d.k==='comida'){ save(); return; } } }
   else if(d.r2x&&r2()){ const t=S.r2.tiradas[+d.r2x]; if(!t) return; if(d.k==='hab'){ t.hab=el.value; const i=SKN.indexOf(el.value); t.at=i<0?'Voluntad':ATL[SKA[i]]; } else t[d.k]=d.k==='dif'?(Number(val)||9):(val||null); } // el atributo va siempre con su habilidad
   else if(d.fchk){ const [id,key]=d.fchk.split('|'); const X=S.fimp?.fichas?.[id]; if(!X) return; X.ign=X.ign||{}; if(el.checked) delete X.ign[key]; else X.ign[key]=true; }
