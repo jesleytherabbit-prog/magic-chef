@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Magic Chef · del foro al tracker
 // @namespace    https://jesleytherabbit-prog.github.io/magic-chef/
-// @version      1.8
+// @version      1.9
 // @description  Lee los posts y los dados del tema de Magic Chef y los envía al tracker. En la ficha de un concursante, envía la ficha.
 // @match        https://hp-avada-kedavra.foroactivo.com/t*
 // @grant        none
@@ -290,12 +290,23 @@
     const o = {}; const t = String(texto || '');
     for (const m of t.matchAll(/(Base|Toque|Presentaci[oó]n)\s*\([^)]*\)\s*:[^\n]*?dado\s*(\d+)/gi)) { const k = m[1][0].toLowerCase() === 'b' ? 'base' : m[1][0].toLowerCase() === 't' ? 'toque' : 'pres'; if (o[k] == null) o[k] = +m[2]; }
     const ev = t.match(/Imprevisto\s*«[^»]*»\s*:[^\n]*?dado\s*(\d+)/i); if (ev) o.ev = +ev[1];
+    // estrellas que dice ganar en su post: «Estrellas del turno: 6» o, si hay una sola fase, su «N estrella(s)»
+    const et = t.match(/Estrellas del turno:?\s*(?:\[?[^\d\n]{0,80}?)?(\d+)\b/i); if (et) o.est = +et[1];
+    else { const un = [...t.matchAll(/Resultado:[^\n]*?\b(\d+)\s+estrellas?\b/gi)]; if (un.length === 1) o.est = +un[0][1]; }
     return Object.keys(o).length ? o : null;
   }
-  function cocinaDesc(x) {
+  // Tiradas esperadas por turno de cocina: cuántas fases tiran y quién tiene imprevisto (se actualiza con cada turno nuevo)
+  const COCINA = { 4: { fases: 2, ev: ['robert', 'emma', 'nick', 'logan'] } };
+  function cocinaDesc(x, id, turno) {
     x = x || {}; const d = (x.d10 && x.d10.length) ? x.d10 : (x.dados || []); const fp = x.fogon || null;
     let html = d.length ? `d10 en orden: <b>${d.join(' · ')}</b> <small>(el tracker los reparte: fases y, al final, el imprevisto)</small>` : '—';
     let revisar = !d.length;
+    const E = COCINA[turno]; if (E && id && d.length) {
+      const esp = E.fases + (E.ev.includes(id) ? 1 : 0);
+      if (d.length !== esp) { html += `<br><span style="color:#A9473A">⚠ Esperaba ${esp} d10 (${E.fases} de cocina${E.ev.includes(id) ? ' + el imprevisto' : ''}) y tiró ${d.length}</span>`; revisar = true; }
+      else if (E.ev.includes(id)) html += `<br><small>Imprevisto: dado ${d[d.length - 1]}</small>`;
+    }
+    if (fp && fp.est != null) html += `<br><small>Su post dice ${fp.est} ${fp.est === 1 ? 'estrella' : 'estrellas'} en el turno.</small>`;
     if (fp) {
       const orden = ['base', 'toque', 'pres'].filter(k => fp[k] != null).map(k => fp[k]).concat(fp.ev != null ? [fp.ev] : []);
       const N = { base: 'Base', toque: 'Toque', pres: 'Presentación', ev: 'Imprevisto' };
@@ -326,7 +337,7 @@
     panel.innerHTML = `<h3>Magic Chef · del foro al tracker</h3>
       <label>Turno que empieza en el post de Hana:
         <select id="mcf-ini">${turnos.map(p => `<option value="${p.pid}" ${p.pid === ult.pid ? 'selected' : ''}>#${p.pid} · ${p.fechaTxt}</option>`).join('')}</select></label>
-      <label>Número de turno en el tracker: <input id="mcf-turno" type="number" min="1" max="60" value="${guard('turno-' + ult.pid) || guard('turno') || 1}" style="width:60px"></label>
+      <label>Número de turno en el tracker: <input id="mcf-turno" type="number" min="1" max="60" value="${turnoDe(ult.pid)}" style="width:60px"></label>
       <label>Fecha límite (para marcar los lentos): <input id="mcf-lim" type="datetime-local" value="${guard('lim') || ''}"></label>
       <div id="mcf-tab"></div>
       <div class="acts"><button class="g" id="mcf-cerrar">Cerrar</button><button id="mcf-env">Enviar al tracker</button></div>
@@ -343,7 +354,7 @@
         const hayCaja = x && (x.caja || (x.d50 || []).length);
         const revisar = r.posts[id] && (hayCaja ? (!x.caja || !(x.d50 || []).length || (x.d10 || []).length !== 1) : (!ac.length || ac.length !== da.length || ac.some(a => a.rev || (a.acc !== 'C' && !a.obj))));
         const lz = esT2 ? null : ac.find(a => a.lazo); const al = (x && x.alertas) || []; const edi = r.edic[id];
-        const t2 = esT2 ? t2desc(x) : null; const co = (esCoc && !hayCaja) ? cocinaDesc(x) : null;
+        const t2 = esT2 ? t2desc(x) : null; const co = (esCoc && !hayCaja) ? cocinaDesc(x, id, +panel.querySelector('#mcf-turno').value) : null;
         const extra = (lz ? `<br><b>Usa el trasfondo de ${PJS[lz.lazo].split(' ')[0]}</b>` : '') + (al.length ? `<br><span style="color:#A9473A">⚠ Menciona: ${al.map(a => a.t).join(', ')}</span>` : '') + (edi ? `<br><span style="color:#A9473A">⚠ Editado ${edi.txt}: esa fecha daría ${T[edi.stEd]}</span>` : '');
         const rv = esT2 ? (r.posts[id] && t2.revisar) : co ? (r.posts[id] && co.revisar) : revisar;
         return `<tr class="${rv || al.length || edi ? 'rev' : ''}"><td>${PJS[id]}</td><td class="${r.posts[id] || ''}">${r.posts[id] ? T[r.posts[id]] : '—'}</td><td>${da.join(', ') || '—'}</td><td>${esT2 ? (r.posts[id] || da.length ? t2.html : '—') : co ? (r.posts[id] || da.length ? co.html : '—') : hayCaja ? `Caja ${x.caja ? 'nº ' + x.caja.n : '<i>sin BBCode</i>'} · d50: ${(x.d50 || []).join(', ') || '—'} · d10: ${(x.d10 || []).join(', ') || '—'}` : (desc || (r.posts[id] ? '<i>no la entendí</i>' : '—'))}${extra}</td></tr>`;
@@ -351,7 +362,7 @@
       panel.querySelector('#mcf-tab').innerHTML = `<table><thead><tr><th>Concursante</th><th>Posteo</th><th>Dados</th><th>${esT2 ? 'Tiradas del Turno 2' : esCoc ? 'Tiradas de cocina' : 'Acción que entendí'}</th></tr></thead><tbody>${filas}</tbody></table>
         <div class="msg">${esCoc ? 'En amarillo: falta el dado, o lo que dice su post (la plantilla del Fogón) no coincide con Dados Mágicos. El tracker reparte los d10 según el plan del turno y avisa si sobran o faltan.' : esT2 ? 'En amarillo: falta el dado, tiró más de dos d10 (revisa el orden), menciona un recurso o una edición cambiaría el posteo. El primer d10 va a Empatía; el segundo, a Frialdad solo si la Empatía falla.' : 'En amarillo: lo que conviene revisar en el tracker (no encontré la tirada escrita, falta el juez, no coinciden dados y acciones, o una edición cambiaría el posteo).'}</div>`;
     };
-    panel.querySelector('#mcf-ini').addEventListener('change', e => { const g = guard('turno-' + e.target.value); if (g) panel.querySelector('#mcf-turno').value = g; pintar(); });
+    panel.querySelector('#mcf-ini').addEventListener('change', e => { panel.querySelector('#mcf-turno').value = turnoDe(+e.target.value); pintar(); });
     panel.querySelector('#mcf-lim').addEventListener('change', e => { guard('lim', e.target.value); pintar(); });
     panel.querySelector('#mcf-turno').addEventListener('change', e => { guard('turno', e.target.value); guard('turno-' + panel.querySelector('#mcf-ini').value, e.target.value); pintar(); });
     panel.querySelector('#mcf-cerrar').addEventListener('click', () => { panel.remove(); panel = null; });
@@ -380,6 +391,16 @@
     return { ts: Date.now(), turno, inicio, limite, posts: r.posts, dados: r.dados, links: r.links, pids: r.pids || {}, ediciones: r.edic || {},
       t1: Object.fromEntries(Object.entries(r.t1).map(([id, x]) => [id, { pid: (r.pids || {})[id] || null, acciones: x.acciones || [], dados: x.dados || [], alertas: x.alertas || [], conf: !!x.conf, caja: x.caja || null, d50: x.d50 || [], d10: x.d10 || [], fogon: x.fogon || null }])) };
   }
+  // número de turno de un post de Hana: lo que ya guardaste; si no, lo que dice el propio post («Turno 4»); si no, el siguiente al último que enviaste
+  function turnoDe(pid) {
+    const g = +guard('turno-' + pid); if (g >= 1) return g;
+    const p = (POSTS || []).find(x => x.pid === pid);
+    const m = p && String(p.texto || '').slice(0, 700).match(/Turno\s*(?:n\.?[º°o]?\s*)?(\d{1,2})\b/i);
+    if (m && +m[1] >= 1 && +m[1] <= 60) return +m[1];
+    let mejor = null; try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); const q = /^mcf-turno-(\d+)$/.exec(k || ''); if (q && +q[1] < pid && (!mejor || +q[1] > mejor.pid)) mejor = { pid: +q[1], t: +localStorage.getItem(k) }; } } catch (e) {}
+    return mejor && mejor.t >= 1 ? mejor.t + 1 : 1;
+  }
+
   async function enviarUno(pid, b) {
     b.disabled = true; b.textContent = 'Leyendo…';
     try {
@@ -393,7 +414,7 @@
       const dados = POSTS.filter(p => p.autor === DADOS && p.pid > pid && (!sig || p.pid < sig.pid) && pjId((p.texto.match(/El miembro\s*'\s*([^']+?)\s*'/i) || [])[1] || '') === id);
       const lim = guard('lim') ? new Date(guard('lim')) : null;
       const r = armar([ini, yo].concat(dados), ini.pid, lim);
-      let turno = +guard('turno-' + ini.pid);
+      let turno = turnoDe(ini.pid); guard('turno-' + ini.pid, String(turno));
       if (!turno) { // post de Hana todavía sin turno asignado: mejor preguntar que mandarlo al turno equivocado
         const v = prompt(`¿Qué número de turno es el post de Hana #${ini.pid} (${ini.fechaTxt})?`, guard('turno') || '1');
         if (!v || !(+v >= 1)) throw new Error('falta el número de turno');
@@ -402,7 +423,7 @@
       await enviar(payloadDe(r, turno, ini.fecha ? ini.fecha.toISOString() : null, guard('lim') || null));
       guard('env-' + pid, '1');
       const x = r.t1[id] || {}; const ac = x.acciones || [];
-      const desc = turno === 2 ? t2desc(x).html : (turno >= 4 && !(x.caja || (x.d50 || []).length)) ? cocinaDesc(x).html : (x.caja || (x.d50 || []).length) ? `Caja ${x.caja ? 'nº ' + x.caja.n : '(sin BBCode)'} · d50: ${(x.d50 || []).join(', ') || '—'} · d10: ${(x.d10 || []).join(', ') || '—'}` : ac.map(a => a.acc === 'C' ? 'C · ingrediente' : a.acc === 'B' ? 'B · congeniar con ' + JN[a.obj] : 'A · ' + (a.met === 'bib' ? 'Biblioteca' : a.met === 'seg' ? 'Seguidores' : a.met === 'inf' ? 'Informantes' : 'Trasfondo') + ' → ' + (JN[a.obj] || '¿juez?')).join(' · ') || '<i>no entendí la acción</i>';
+      const desc = turno === 2 ? t2desc(x).html : (turno >= 4 && !(x.caja || (x.d50 || []).length)) ? cocinaDesc(x, id, turno).html : (x.caja || (x.d50 || []).length) ? `Caja ${x.caja ? 'nº ' + x.caja.n : '(sin BBCode)'} · d50: ${(x.d50 || []).join(', ') || '—'} · d10: ${(x.d10 || []).join(', ') || '—'}` : ac.map(a => a.acc === 'C' ? 'C · ingrediente' : a.acc === 'B' ? 'B · congeniar con ' + JN[a.obj] : 'A · ' + (a.met === 'bib' ? 'Biblioteca' : a.met === 'seg' ? 'Seguidores' : a.met === 'inf' ? 'Informantes' : 'Trasfondo') + ' → ' + (JN[a.obj] || '¿juez?')).join(' · ') || '<i>no entendí la acción</i>';
       toast(`<b>${PJS[id]}</b> enviado al turno ${turno}.<br>${desc}<br>Dados: ${(x.dados || []).join(', ') || '—'}${r.edic[id] ? '<br>⚠ Tiene una edición para revisar en Asistencia.' : ''}<br><small>En el tracker pulsa «Traer del foro»: solo se suma lo que no estaba importado.</small>`);
       b.textContent = '✓ En el tracker'; b.classList.add('ok');
     } catch (e) { toast('No pude enviarlo: ' + e.message); b.textContent = '🍳 Al tracker'; }
