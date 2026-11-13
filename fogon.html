@@ -78,7 +78,10 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--terra);outline-o
 @media (max-width:520px){.campos{grid-template-columns:1fr 1fr}.campos .c3{grid-column:1/-1}}
 .res{margin-top:12px;padding:12px 14px;border-radius:9px;background:var(--card2);border:1px solid var(--line);display:flex;flex-wrap:wrap;align-items:center;gap:6px 18px}
 .res .tot{font-family:var(--display);font-size:30px;line-height:1;color:var(--terra-ink)}
-.res .estr{font-size:26px;letter-spacing:.08em;color:var(--gold)}
+.res .estr{font-size:26px;letter-spacing:.08em;color:var(--gold);display:inline-flex;gap:3px;align-items:center}
+.estr-i{width:30px;height:auto;vertical-align:middle;image-rendering:pixelated}
+.estr-i.off{filter:grayscale(1) brightness(.6);opacity:.35}
+#estTot .estr-i{width:26px}
 .res .ver{font-weight:700}
 .res.ok .ver{color:var(--ok)} .res.ko .ver{color:var(--bad)}
 .aviso{color:var(--warn);font-size:15px;margin-top:6px}
@@ -185,15 +188,20 @@ function plantilla(id){ const p=DATA.pj[id]; let t=`[b]${DATA.titulo} · ${p.n}[
   if(p.ing) t+=`Ingrediente: ${p.ing.nombre} (nº ${p.ing.n})\n`;
   const q=cmpRes(p,id); if(q&&q.dado!=null) t+=`${cap(q.r.lbl)}: ${q.r.nombre} (nº ${q.r.n}): Carisma + Coordinación = ${q.mod}, dado ${q.dado} = [b]${q.total}[/b] contra ${q.r.dif}: ${q.sync?'sincronizados':'desincronizados'}\n`;
   const v=evRes(p,id); if(v&&v.dado!=null) t+=`Imprevisto «${v.e.titulo}»: ${v.e.at} + ${v.e.hab} = ${v.mod}, dado ${v.dado} = [b]${v.total}[/b] contra ${v.e.dif}: ${v.pasa?'superado':'fallado'}\n`;
-  t+='\n';
+  t+='\n'; const r2=DATA.tipo==='r2'; let sum=0, hay=0;
   fasesDe(p).forEach(fz=>{ const c=calc(p,fz,id); const x=p.f[fz.k];
-    if(c.dado==null){ t+=`[b]${fz.nombre}[/b] (${fz.juez}): falta el dado\n`; return; }
+    if(c.dado==null){ t+=`[b]${fz.nombre}[/b] (${fz.juez}): falta el dado\n\n`; return; }
     const ms=x.mods.filter((m,i)=>{ const s=st(id,fz.k); return (s.off&&(i in s.off))?s.off[i]:m.on; }).map(m=>`${sg(m.v)} ${m.t}`);
     c.rm.forEach(m=>ms.push(`${sg(m.v)} ${m.t}`)); if(c.evM) ms.push(`${sg(c.evM)} imprevisto`);
     if(x.extra) ms.push(`${sg(x.extra)} extra del máster`); if(c.otros) ms.push(`${sg(c.otros)} otros`);
     t+=`[b]${fz.nombre}[/b] (${fz.juez}): ${fz.at} + ${fz.hab} = ${c.mod}, dado ${c.dado}${c.ext?`, modificadores ${sg(c.ext)}${c.tope?' (tope +7)':''}`:''} = [b]${c.total}[/b] contra ${fz.dif}\n`;
     if(c.evG&&c.est!=null) t+=`[i]El imprevisto quita un grado de éxito.[/i]\n`;
-    if(ms.length) t+=`[i]${ms.join(' · ')}[/i]\n`; });
+    if(ms.length) t+=`[i]${ms.join(' · ')}[/i]\n`;
+    const g=c.g; const res=g.pasa?(g.ge?`superada con ${g.ge} ${g.ge>1?'grados':'grado'} de éxito`:'superada'):(g.gf?`fallada con ${g.gf} ${g.gf>1?'grados':'grado'} de fracaso`:'fallada');
+    if(r2){ t+=`Resultado: ${res} · [b]${c.cli>0?'+':''}${c.cli} clientes[/b]\n`; sum+=c.cli; }
+    else { t+=`Resultado: ${res} · ${c.est?ESTR_BB.repeat(c.est)+' ':''}[b]${c.est} ${c.est===1?'estrella':'estrellas'}[/b]\n`; sum+=c.est; }
+    hay++; t+='\n'; });
+  if(hay>1) t+=r2?`[b]Clientes del turno: ${sum>0?'+':''}${sum}[/b]`:`[b]Estrellas del turno:[/b] ${sum?ESTR_BB.repeat(sum)+' ':''}[b]${sum}[/b]`;
   return t.trim(); }
 
 function dynChips(p,fz,id){ const x=p.f[fz.k]; const rm=cmpMods(p,id,fz.k).map(m=>`<span class="chip ${m.v>0?'pos':'neg'}">${sg(m.v)} ${esc(m.t)}</span>`).join(''); const em=evEf(p,id,fz.k).m; const ev=em?`<span class="chip neg">${sg(em)} imprevisto</span>`:'';
@@ -217,14 +225,16 @@ function pintarExtras(id){ const p=DATA.pj[id];
     else { const g=q.g; const ge=Math.min(2,g.ge); er.className='res '+(q.sync?'ok':'ko'); er.innerHTML=`<span class="tot num">${q.total}</span><span class="mini">contra ${q.r.dif}</span><span class="ver">${q.sync?`¡Sincronizados!${ge?` +${ge} a la Base por la sincronía.`:''}`:'Desincronizados'}</span>`; } }
   const v=evRes(p,id); const ee=$('#res-ev'); if(ee&&v){ if(v.dado==null){ ee.className='res'; ee.innerHTML='<span class="mini">Escribe el dado del imprevisto y te digo cómo te fue.</span>'; }
     else { ee.className='res '+(v.pasa?'ok':'ko'); ee.innerHTML=`<span class="tot num">${v.total}</span><span class="mini">contra ${v.e.dif}</span><span class="ver">${v.pasa?'Superado: no pierdes nada':'Fallado: '+(v.e.ef==='grado'?'pierdes un grado de éxito':'tienes '+sg(v.e.ef)+' al total')+' en '+(v.e.fase==='todas'?'todas las fases':'la fase '+v.e.faseN)}</span>`; } } }
+const ESTR_URL='https://i.imgur.com/xgYhAdJ.png', ESTR_BB='[img(30px,auto)]https://2img.net/i.imgur.com/xgYhAdJ.png[/img]';
+const ESTR_IMG=`<img class="estr-i" src="${ESTR_URL}" alt="★">`, ESTR_OFF=`<img class="estr-i off" src="${ESTR_URL}" alt="☆">`;
 function pintarRes(id){ const p=DATA.pj[id]; let suma=0, hay=false; const r2=DATA.tipo==='r2'; pintarExtras(id);
   fasesDe(p).forEach(fz=>{ const c=calc(p,fz,id); const dy=$('#dyn-'+fz.k); if(dy) dy.innerHTML=dynChips(p,fz,id); const el=$('#res-'+fz.k); if(!el) return;
     if(c.dado==null){ el.className='res'; el.innerHTML=`<span class="mini">Escribe el dado que sacaste en el foro y te digo cómo te fue.</span>`; return; }
     hay=true; suma+=r2?c.cli:c.est; const g=c.g;
     const txt=g.pasa?(g.ge?`Superada con ${g.ge} ${g.ge>1?'grados':'grado'} de éxito`:'Superada'):(g.gf?`Fallada con ${g.gf} ${g.gf>1?'grados':'grado'} de fracaso`:'Fallada');
     el.className='res '+(g.pasa?'ok':'ko');
-    el.innerHTML=`<span class="tot num">${c.total}</span><span class="mini">contra ${fz.dif}</span><span class="ver">${txt}</span>${r2?`<span class="estr num" aria-label="${c.cli} clientes">${c.cli>0?'+':''}${c.cli} clientes</span>`:`<span class="estr" aria-label="${c.est} de 3 estrellas">${'★'.repeat(c.est)}${'☆'.repeat(3-c.est)}</span>`}${c.evG&&g.pasa?'<span class="aviso" style="flex-basis:100%">El imprevisto te quita un grado de éxito en esta fase.</span>':''}${c.tope?'<span class="aviso" style="flex-basis:100%">Los modificadores externos llegan al tope de +7.</span>':''}`; });
-  $('#estTot').innerHTML=hay?`<b class="num">${r2?(suma>0?'+':'')+suma+' clientes':suma+' ★'}</b>`:'<span class="mini">—</span>';
+    el.innerHTML=`<span class="tot num">${c.total}</span><span class="mini">contra ${fz.dif}</span><span class="ver">${txt}</span>${r2?`<span class="estr num" aria-label="${c.cli} clientes">${c.cli>0?'+':''}${c.cli} clientes</span>`:`<span class="estr" aria-label="${c.est} de 3 estrellas">${ESTR_IMG.repeat(c.est)}${ESTR_OFF.repeat(3-c.est)}</span>`}${c.evG&&g.pasa?'<span class="aviso" style="flex-basis:100%">El imprevisto te quita un grado de éxito en esta fase.</span>':''}${c.tope?'<span class="aviso" style="flex-basis:100%">Los modificadores externos llegan al tope de +7.</span>':''}`; });
+  $('#estTot').innerHTML=hay?`<b class="num">${r2?(suma>0?'+':'')+suma+' clientes':suma+'</b> '+ESTR_IMG+'<b>'}</b>`:'<span class="mini">—</span>';
   $('#plant').value=plantilla(id); }
 
 function pintar(){ if(!DATA) return; const ids=Object.keys(DATA.pj).sort((a,b)=>DATA.pj[a].n.localeCompare(DATA.pj[b].n,'es'));
