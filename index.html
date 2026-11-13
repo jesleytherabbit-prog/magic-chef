@@ -708,7 +708,7 @@ function cajaMapa(){ // quién tiene cada ingrediente: por orden de post; si est
 function roboHecho(id){ const c=S.caja[id]; return !!(c&&c.robo&&!c.defendido&&ING[c.d50]&&ING[S.caja[c.robo]?.d50]); }
 function cajaCalc(id){ const c=S.caja[id]; if(!c||!c.d50||!ING[c.d50]) return null; const ing=ING[cajaMapa().asig[id]||c.d50]; const mod=cajaMod(id,ing);
   if(mod==null||c.dado===''||c.dado==null) return {ing,pend:true};
-  const total=mod+Number(c.ot||0)+Number(c.dado); const g=grados(total,ing.dif); const v=g.pasa?ing.ok:ing.ko; return {ing,total,g,pasa:g.pasa,v}; }
+  const total=mod+Number(c.ot||0)+Number(c.dado); let g=grados(total,ing.dif); if(c.ayudaPD&&!g.pasa) g={...g,pasa:true,ge:0,gf:0,pd:true}; const v=g.pasa?ing.ok:ing.ko; return {ing,total,g,pasa:g.pasa,v,pd:!!(c.ayudaPD&&g.pd)}; } // ayudaPD: alguien gastó 1 PD para que lo domara
 function cajaRepes(){ const m={}; Object.entries(cajaMapa().tom).forEach(([n,id])=>{ m[n]=[id]; }); return m; }
 
 // ---------------------------------------------------------------- rondas y estrellas
@@ -1524,7 +1524,7 @@ function vRondas(){
 function vCaja(){
   const rep=cajaRepes(); const asignados=PJS.filter(p=>S.caja[p.id]?.d50).length;
   const rows=PJS.map(p=>{ const c=S.caja[p.id]||{}; const k=cajaCalc(p.id); const ing=k?.ing; const M=cajaMapa(); const cambio=ing&&ing.n!==Number(c.d50); const robador=PJS.find(q=>S.caja[q.id]?.robo===p.id&&!S.caja[q.id]?.defendido);
-    const res=!k?'<span class="res r-none">—</span>':k.pend?'<span class="res r-vago">Falta tirar</span>':`<span class="res ${k.pasa?'r-det':'r-falso'}">${k.pasa?'Domado':'Se rebeló'} ${k.v>0?'+':''}${k.v}</span>`;
+    const res=!k?'<span class="res r-none">—</span>':k.pend?'<span class="res r-vago">Falta tirar</span>':`<span class="res ${k.pasa?'r-det':'r-falso'}">${k.pasa?'Domado':'Se rebeló'} ${k.v>0?'+':''}${k.v}</span>${k.pd?`<div class="mini">con el PD de ${esc(BY[S.caja[p.id].ayudaPD].nombre.split(' ')[0])}</div>`:''}`;
     return `<tr><td><div class="who"><img alt="" src="${foto(p.id)}"><b>${esc(p.nombre)}</b></div></td>
      <td><input type="number" min="1" max="50" data-cj="${p.id}" data-k="d50" value="${c.d50??''}" aria-label="Resultado del D50"></td>
      <td style="min-width:220px">${ing?`${ingImg(ing.n,44,'float:left;margin-right:8px')}<b>${ing.n}. ${esc(ing.nombre)}</b>${cambio?` <span class="chip neg">sacó ${c.d50}</span>`:''}<div class="mini">${esc(ing.desc)}</div>`:'<span class="mini">Esperando el D50</span>'}</td>
@@ -1533,7 +1533,7 @@ function vCaja(){
      <td><input type="number" data-cj="${p.id}" data-k="mod" value="${c.mod??''}" placeholder="${ing&&cajaAuto(p.id,ing)?cajaAuto(p.id,ing).v:''}" title="${ing&&cajaAuto(p.id,ing)?esc(cajaAuto(p.id,ing).txt):''}" aria-label="Atributo + Habilidad"></td>
      <td><input type="number" data-cj="${p.id}" data-k="ot" value="${c.ot??''}" aria-label="Otros"></td>
      <td><input type="number" min="1" max="10" data-cj="${p.id}" data-k="dado" value="${c.dado??''}" aria-label="Dado"></td>
-     <td><select data-cj="${p.id}" data-k="robo" aria-label="A quién le robó" style="max-width:130px"><option value="">Nadie</option>${PJS.filter(q=>q.id!==p.id&&S.caja[q.id]?.d50).map(q=>`<option value="${q.id}" ${c.robo===q.id?'selected':''}>${esc(q.nombre.split(' ')[0])}</option>`).join('')}</select>${c.robo?`<label class="mini" style="display:block;margin-top:4px;white-space:nowrap"><input type="checkbox" data-cj="${p.id}" data-k="defendido" ${c.defendido?'checked':''}> Lo defendió</label>`:''}${robador?`<div class="mini">Le robó ${esc(robador.nombre.split(' ')[0])}</div>`:''}</td>
+     <td><select data-cj="${p.id}" data-k="robo" aria-label="A quién le robó" style="max-width:130px"><option value="">Nadie</option>${PJS.filter(q=>q.id!==p.id&&S.caja[q.id]?.d50).map(q=>`<option value="${q.id}" ${c.robo===q.id?'selected':''}>${esc(q.nombre.split(' ')[0])}</option>`).join('')}</select>${c.robo?`<label class="mini" style="display:block;margin-top:4px;white-space:nowrap"><input type="checkbox" data-cj="${p.id}" data-k="defendido" ${c.defendido?'checked':''}> Lo defendió</label>`:''}${robador?`<div class="mini">Le robó ${esc(robador.nombre.split(' ')[0])}</div>`:''}<label class="mini" style="display:block;margin-top:6px">Domado con PD de<select data-cj="${p.id}" data-k="ayudaPD" style="max-width:130px;display:block" aria-label="Quién gastó el Punto de Destino para que lo domara"><option value="">Nadie</option>${PJS.map(q=>`<option value="${q.id}" ${c.ayudaPD===q.id?'selected':''}>${esc(q.nombre.split(' ')[0])}${q.id===p.id?' (propio)':''}</option>`).join('')}</select></label></td>
      <td class="tot">${k&&!k.pend?k.total:'—'}</td><td>${res}${c.link?`<div><a class="mini" href="${esc(c.link)}" target="_blank" rel="noopener">ver post ↗</a></div>`:''}${(c.avisos||[]).map(a=>`<div class="mini" style="color:var(--bad);white-space:normal;min-width:190px">⚠ ${esc(a)}</div>`).join('')}</td></tr>`; }).join('');
   const usados=Object.keys(rep).map(Number);
   const ref=INGR.map(r=>{ const who=(rep[r[0]]||[]).map(id=>esc(BY[id].nombre.split(' ')[0])).join(', '); return `<tr${who?' style="background:var(--card2)"':''}><td class="num">${r[0]}</td><td>${ingImg(r[0],34,'float:left;margin-right:8px')}<b>${esc(r[1])}</b><div class="mini">${esc(r[2])}</div></td><td class="mini">${esc(r[3])}</td><td class="num">${r[4]}</td><td class="mini">+${r[5]} / ${r[6]}</td><td class="mini">${who||'—'}</td></tr>`; }).join('');
@@ -1967,6 +1967,7 @@ document.addEventListener('change',e=>{
   else if(d.cj){ const c=S.caja[d.cj]=S.caja[d.cj]||{}; const pd=(id,n)=>{ const u=fu(id); u.c.pd=Math.max(0,(u.c.pd||0)+n); };
     if(d.k==='robo'){ if(c.robo&&!val){ pd(d.cj,-1); if(c.defendido){ pd(c.robo,-1); c.defendido=false; } } else if(!c.robo&&val) pd(d.cj,1); else if(c.defendido&&val!==c.robo){ pd(c.robo,-1); c.defendido=false; } c.robo=val||''; }
     else if(d.k==='defendido'){ const on=e.target.checked; if(on!==!!c.defendido) pd(c.robo,on?1:-1); c.defendido=on; }
+    else if(d.k==='ayudaPD'){ if(c.ayudaPD) pd(c.ayudaPD,-1); if(val) pd(val,1); c.ayudaPD=val||''; }
     else { c[d.k]=val; if(d.k==='d50'&&val!==''&&!c.t) c.t=Date.now(); } }
   else if(d.resc){ const R=((S.rondas[S.ronda]=S.rondas[S.ronda]||{})[d.resc]=S.rondas[S.ronda][d.resc]||{}); R.rescate=val; }
   else if(d.cu){ const L=S.cuchara[d.cu]=S.cuchara[d.cu]||[]; if(val) L.push({r:d.rr,g:false}); else S.cuchara[d.cu]=L.filter(x=>x.r!==d.rr); }
