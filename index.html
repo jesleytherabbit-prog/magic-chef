@@ -1161,7 +1161,8 @@ const PJCOL={logan:'#803E3A',volker:'#803E3A',irina:'#4ca07d',derek:'#769aaf',ro
 const CMP_FASE={Cocina:'base',Latrocinio:'toque','Presentación':'pres'};
 function habAt(h){ const i=SKN.indexOf(h); return i<0?'Voluntad':ATL[SKA[i]]; }
 function rollsDe(rd){ const c=(S.rcfg&&S.rcfg[rd]&&S.rcfg[rd].rolls)||{}; return {base:c.base||ROLLS0.base,toque:c.toque||ROLLS0.toque,pres:c.pres||ROLLS0.pres}; }
-function planDe(t){ return (S.plan&&S.plan[t])||null; }
+const PLAN0={4:{ronda:'R1',fases:['base','toque'],ev:true,titulo:'La cocción'}}; // lo que ya es público del Turno 4 (el post): sirve aunque no hayas cargado el archivo privado
+function planDe(t){ return (S.plan&&S.plan[t])||PLAN0[t]||null; }
 
 // ----- Eventos aleatorios: una tirada del PJ; si la falla pierde un grado de éxito (o un modificador) en la fase indicada
 function evX(){ S.ev=S.ev||{}; S.ev.list=S.ev.list||[]; S.ev.pub=S.ev.pub||{}; return S.ev; }
@@ -1447,10 +1448,30 @@ let TOPEN=null; // qué desplegable de Turnos está abierto (no se guarda en la 
 function vTurnos(){
   const abierto=TOPEN??(S.turno<=3?S.turno:'mas');
   const nT1=PJS.filter(p=>S.t1[p.id]?.acc).length, nT2=PJS.filter(p=>{ const e=S.t2?.[p.id]?.ed; return e!==''&&e!=null; }).length, nT3=PJS.filter(p=>S.caja[p.id]?.d50).length;
-  const SEC=[[1,'Turno 1','La llegada',`${nT1}/${PJS.length} con acción`,vT1],[2,'Turno 2','La ronda de Rupert',`${nT2}/${PJS.length} con tirada`,vT2],[3,'Turno 3','La Caja Misteriosa',`${nT3}/${PJS.length} cajas abiertas`,vCaja],['mas','Turnos siguientes','Crear la tabla de cada turno',Object.keys(S.tablas||{}).filter(t=>+t>=4).length+' tablas creadas',vistaTabla]];
+  const SEC=[[1,'Turno 1','La llegada',`${nT1}/${PJS.length} con acción`,vT1],[2,'Turno 2','La ronda de Rupert',`${nT2}/${PJS.length} con tirada`,vT2],[3,'Turno 3','La Caja Misteriosa',`${nT3}/${PJS.length} cajas abiertas`,vCaja],['mas','Turnos siguientes',S.turno>=4&&planDe(S.turno)?'Turno '+S.turno+' · cocina y tablas':'Crear la tabla de cada turno',Object.keys(S.tablas||{}).filter(t=>+t>=4).length+' tablas creadas',()=>(S.turno>=4?vCocinaTurno():'')+vistaTabla()]];
   return `<section class="view">${SEC.map(([k,t,n,c,fn])=>{ const on=String(abierto)===String(k); const act=k===S.turno||(k==='mas'&&S.turno>3);
     return `<div class="acc ${on?'on':''}"><button class="acc-h" data-topen="${k}" aria-expanded="${on}"><span class="acc-c" aria-hidden="true"></span><b>${t}</b><span class="acc-n">${n}</span>${act?'<span class="acc-act">Turno actual</span>':''}<span class="acc-e">${c}</span></button>${on?`<div class="acc-b">${fn()}</div>`:''}</div>`; }).join('')}</section>`;
 }
+// ----- Turnos de cocina (4 en adelante): una tabla con las tiradas de fase, el imprevisto y las Estrellas del turno
+function vCocinaTurno(){ const t=S.turno, pl=planDe(t); if(!pl||!pl.ronda||pl.ronda==='R2') return '';
+  const rd=pl.ronda, D=RONDAS[rd], fs=pl.fases||['base','toque','pres']; const X=evX();
+  const hayEv=X.list.some(e=>Number(e.turno)===t);
+  const head=fs.map(f=>`<th>${FASE_N[f]} · ${FASE_J[f]} <span class="mini">(vs ${D.d[f]})</span></th>`).join('');
+  let tot=0;
+  const rows=PJS.map(p=>{ const R=S.rondas[rd]?.[p.id]||{}; const c=rowCalc(p.id,rd); let st=0;
+    const celdas=fs.map(f=>{ const x=R[f]||{}; const fc=c.fases[f]; if(!fc.pend) st+=fc.st;
+      return `<td><div style="display:flex;gap:4px;align-items:center"><input type="number" data-r="${p.id}" data-f="${f}" data-k="mod" value="${x.mod??''}" placeholder="${r2Auto(p.id,rollsDe(rd)[f]).v}" aria-label="Mod ${FASES[f]}" title="Atributo + Habilidad (vacío = el de la ficha)"><input type="number" data-r="${p.id}" data-f="${f}" data-k="dado" value="${x.dado??''}" aria-label="Dado ${FASES[f]}" title="Dado"><input type="number" data-r="${p.id}" data-f="${f}" data-k="extra" value="${x.extra??''}" aria-label="Extra ${FASES[f]}" title="Extra"></div>
+        <div class="mini">${fc.pend?'falta el dado':`${fc.total} vs ${fc.dif} · <span class="stars">${'★'.repeat(fc.st)}${'☆'.repeat(3-fc.st)}</span>`}${fc.capWarn?' <span class="warn">tope +7</span>':''}${fc.evG?` <span class="warn">imprevisto −${fc.evG} grado</span>`:''}</div>${fc.mods.map(m=>`<span class="chip ${m.v>0?'pos':'neg'}">${m.v>0?'+':''}${m.v} ${esc(m.txt)}</span>`).join('')}</td>`; }).join('');
+    tot+=st;
+    const i=X.list.findIndex(e=>e.pj===p.id&&Number(e.turno)===t), e=i>=0?X.list[i]:null; let evc='<span class="mini">—</span>';
+    if(e){ const k=evCalc(e); evc=`<div class="mini"><b>${esc(e.titulo)}</b> · ${esc(e.hab)} vs ${k.dif}</div><div style="display:flex;gap:6px;align-items:center"><input type="number" data-xe="${i}|dado" value="${e.dado??''}" min="1" max="10" style="width:56px" aria-label="Dado del imprevisto de ${esc(p.nombre)}">${k.pend?'<span class="mini">sin dado</span>':`<b>${k.total}</b> ${k.pasa?'<span class="res r-det">Superado</span>':'<span class="res r-falso">Fallado</span>'}`}</div>`; }
+    return `<tr><td><div class="who"><img alt="" src="${foto(p.id)}"><b>${esc(p.nombre)}</b></div></td>${celdas}<td>${evc}</td><td class="tot"><b>${st}</b></td></tr>`; }).join('');
+  return `<section class="view"><div class="panel"><div class="eyebrow">Turno ${t} · ${esc(D.n)}</div><h2>${esc(pl.titulo||'Cocina del turno')}</h2>
+   <p class="sub">Una fila por concursante: Mod. (Atributo + Habilidad) · Dado · Extra de cada fase, el dado del imprevisto y las Estrellas que lleva en este turno. «Traer del foro» rellena los dados solos, y el imprevisto fallado ya descuenta un grado de éxito.</p>
+   ${hayEv?'':`<p class="mini" style="color:var(--bad)">No hay imprevistos cargados para el turno ${t}: carga el archivo privado en Configurar (los dados de imprevisto se anotan después, por orden).</p>`}
+   <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0"><button class="btn primary" id="foroImp2">Traer del foro</button><button class="btn" data-xpapl="${t}">Poner en el Fogón</button></div>
+   <div class="tw"><table class="work"><thead><tr><th>Concursante</th>${head}<th>Imprevisto</th><th>★ turno</th></tr></thead><tbody>${rows}</tbody></table></div>
+   <p class="mini" style="margin-top:8px">Estrellas repartidas en el turno: <b>${tot}</b>. Los platos de la galería se actualizan solos con estos números (Platos).</p></div></section>`; }
 let DP_SEL=0;
 function vDespensa(){
   const {tom}=cajaMapa(); const n=Object.keys(tom).length;
@@ -1888,7 +1909,7 @@ document.addEventListener('click',e=>{
     if(usado&&!b.dataset.sure){ b.dataset.sure='1'; b.textContent='El turno '+t+' tiene datos. ¿Quitarlo?'; setTimeout(()=>{ if(b.isConnected){ delete b.dataset.sure; b.textContent='Quitar el último'; } },3000); return; }
     if(S.tablasPublicadas) delete S.tablasPublicadas[t]; if(S.tablas) delete S.tablas[t]; delete S.posts[t]; delete S.mt[t]; S.total=Math.max(1,t-1); S.turno=Math.min(S.turno,S.total); render(); return; }
   if(b.id==='passGo'){ tryPass(); return; }
-  if(b.id==='foroImp'){ importarForo(); return; }
+  if(b.id==='foroImp'||b.id==='foroImp2'){ importarForo(); return; }
   if(b.id==='cloudNow'){ if(CLOUD.ready) cloudSave(); else cloudLoadMaster(); return; }
   if(b.id==='lockBtn'){ save(); clearTimeout(CLOUD.timer); (CLOUD.ready?cloudSave():Promise.resolve()).finally(()=>{ try{ sessionStorage.removeItem('mc-master'); sessionStorage.removeItem('mc-pin'); }catch(e){} location.reload(); }); return; }
   if(b.dataset.dpsel!==undefined){ const k=Number(b.dataset.dpsel); DP_SEL=(DP_SEL===k)?0:k; render(); return; }
