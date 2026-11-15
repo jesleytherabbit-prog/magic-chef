@@ -536,14 +536,18 @@ async function cloudSave(){ const priv=docPriv(); if(!priv) return; try{ await f
     cloudMsg(pgOk?'Guardado en la nube · '+new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}):'Guardado, pero no pude actualizar las páginas públicas (Fogón y Clasificación).',!pgOk); }
   catch(e){ cloudMsg(e.message==='403'?'La nube rechazó el guardado (revisa las reglas de Firebase). Está guardado en este navegador.':'Sin conexión con la nube. Está guardado en este navegador.',true); } }
 const DOC_IMP='MC-MAGICCHEF-IMPORT';
+// Lo que cambiaste a mano en Asistencia no lo pisa «Traer del foro»
+function marcaMan(t,id,v){ const M=((S.postsMan=S.postsMan||{})[t]=S.postsMan[t]||{}); if(v==null||v==='pend') delete M[id]; else M[id]=1; }
+const esMan=(t,id)=>!!(S.postsMan&&S.postsMan[t]&&S.postsMan[t][id]);
 async function importarForo(){
   let o; try{ o=await fbGet(DOC_IMP); }catch(e){ toast('No pude leer la nube'); return; }
   if(!o){ toast('Todavía no hay nada enviado desde el foro'); return; }
   const t=Number(o.turno)||S.turno; let nP=0,nD=0,nA=0;
   const P=S.posts[t]=S.posts[t]||{};
   const ED=(S.edic=S.edic||{})[t]=(S.edic||{})[t]||{}; let nE=0;
-  Object.entries(o.ediciones||{}).forEach(([id,x])=>{ if(!BY[id]) return; const ant=ED[id]; if(ant&&ant.f===x.f) return; ED[id]=x; nE++; }); // una edición nueva se vuelve a revisar
-  Object.entries(o.posts||{}).forEach(([id,st])=>{ if(!BY[id]) return; if(ED[id]?.dec==='aplicar') return; const cur=P[id]||'pend'; if(cur==='pend'||cur==='rap'||cur==='nor'||cur==='len'){ if(cur!==st) nP++; P[id]=st; } });
+  Object.entries(o.ediciones||{}).forEach(([id,x])=>{ if(!BY[id]) return; const ant=ED[id]; if(ant&&ant.f===x.f) return; ED[id]=x; nE++; if(x.aplicada&&!esMan(t,id)) x.dec='aplicar'; }); // la hora de la última edición ya cuenta; una edición nueva se vuelve a mostrar
+  Object.entries(o.ediciones||{}).forEach(([id,x])=>{ if(BY[id]&&ED[id]&&!ED[id].dec&&x.aplicada&&!esMan(t,id)) ED[id].dec='aplicar'; });
+  Object.entries(o.posts||{}).forEach(([id,st])=>{ if(!BY[id]) return; if(esMan(t,id)) return; /* lo cambiaste a mano: no se toca */ const cur=P[id]||'pend'; if(cur==='pend'||cur==='rap'||cur==='nor'||cur==='len'){ if(cur!==st) nP++; P[id]=st; } });
   S.foro=S.foro||{}; S.foro[t]={ts:o.ts,inicio:o.inicio,limite:o.limite,dados:o.dados||{},links:o.links||{}};
   S.foroHecho=S.foroHecho||{}; let nYa=0, nC=0;
   const esCaja=x=>!!(x.caja||(x.d50&&x.d50.length));
@@ -1777,9 +1781,9 @@ function vAsis(){
   const rows=A.pj.map(r=>`<tr><td class="nm">${r.p.puesto}. ${esc(r.p.nombre)}</td>${T.map(t=>{ const s=S.posts[t]?.[r.p.id]||'pend'; return `<td><button class="g g-${s} ${t===S.turno?'cur':''}" data-gc="${r.p.id}" data-gt="${t}" title="${esc(r.p.nombre)} · turno ${t}: ${ST_TXT[s]}">${ST_COD[s]}</button></td>`; }).join('')}<td><input type="checkbox" data-ret="${r.p.id}" ${S.ret[r.p.id]?'checked':''} aria-label="${esc(r.p.nombre)} se retiró"></td><td class="sum">${r.n}</td><td class="sum" style="color:${r.w===1?'var(--ok)':r.w?'var(--warn)':'var(--mute)'}">${r.w}</td><td class="sum">${r.gr}</td></tr>`).join('');
   const edL=Object.entries(S.edic||{}).flatMap(([t,o])=>Object.entries(o).filter(([id])=>BY[id]).map(([id,x])=>({t,id,x}))).sort((a,b)=>(a.x.dec?1:0)-(b.x.dec?1:0)||b.t-a.t);
   const edPend=edL.filter(e=>!e.x.dec).length;
-  const edPanel=edL.length?`<details class="ed-box" ${edPend?'open':''}><summary>Ediciones para revisar${edPend?` · ${edPend} pendiente${edPend>1?'s':''}`:' · al día'}</summary><p class="mini">El posteo se cuenta por la fecha del post. Esto solo avisa cuando la última edición caería en un tramo peor. Decidís vos.</p>${edL.map(({t,id,x})=>{ const k=`${t}|${id}`; const lnk=x.url?` <a href="${esc(x.url)}" target="_blank" rel="noopener">ver post ↗</a>`:'';
-    const acc=!x.dec?`<div class="ed-acc"><button class="btn primary" data-ed="${k}|aplicar">Cambiar a ${ST_TXT[x.stEd]}</button><button class="btn" data-ed="${k}|dejar">Dejar ${ST_TXT[x.st]}</button></div>`:`<div class="ed-acc"><span class="mini">${x.dec==='aplicar'?`✓ Cambiado a ${ST_TXT[x.stEd]}`:`✓ Se queda ${ST_TXT[x.st]}`}</span><button class="btn" data-ed="${k}|deshacer">Deshacer</button></div>`;
-    return `<div class="ed-row ${x.dec?'':'pend'}"><div><b>${esc(BY[id].nombre)}</b> · Turno ${t}: posteó ${ST_TXT[x.st]}, pero su última edición (${esc(x.txt)}) cae en ${ST_TXT[x.stEd]}.${lnk}</div>${acc}</div>`; }).join('')}</details>`:'';
+  const edPanel=edL.length?`<details class="ed-box" ${edPend?'open':''}><summary>Ediciones para revisar${edPend?` · ${edPend} pendiente${edPend>1?'s':''}`:' · al día'}</summary><p class="mini">El posteo cuenta por el peor tramo entre su fecha y la de su última edición, y se aplica solo al traer del foro. Si no corresponde (una errata, por ejemplo), pulsa «Dejar»: queda fijo y no se vuelve a cambiar.</p>${edL.map(({t,id,x})=>{ const k=`${t}|${id}`; const lnk=x.url?` <a href="${esc(x.url)}" target="_blank" rel="noopener">ver post ↗</a>`:'';
+    const acc=!x.dec?`<div class="ed-acc"><button class="btn primary" data-ed="${k}|aplicar">Cambiar a ${ST_TXT[x.stEd]}</button><button class="btn" data-ed="${k}|dejar">Dejar ${ST_TXT[x.st]}</button></div>`:`<div class="ed-acc"><span class="mini">${x.dec==='aplicar'?`✓ Cuenta ${ST_TXT[x.stEd]}`:`✓ Se queda ${ST_TXT[x.st]}`}</span>${x.dec==='aplicar'?`<button class="btn" data-ed="${k}|dejar">Dejar ${ST_TXT[x.st]}</button>`:`<button class="btn" data-ed="${k}|aplicar">Cambiar a ${ST_TXT[x.stEd]}</button>`}</div>`;
+    return `<div class="ed-row ${x.dec?'':'pend'}"><div><b>${esc(BY[id].nombre)}</b> · Turno ${t}: posteó ${ST_TXT[x.st]} y su última edición (${esc(x.txt)}) cae en ${ST_TXT[x.stEd]}.${lnk}</div>${acc}</div>`; }).join('')}</details>`:'';
   return `<section class="view"><div class="panel"><div class="eyebrow">Turno a turno</div><h2>Asistencia</h2>
    <p class="sub">Clic en una casilla para cambiarla. Concursantes: R rápido · N a tiempo · L lento · FJ falta justificada · FI falta injustificada · SP sin participar. Master: ✓ con tirada · Z sin tirada · X con faltas (anota cuántas) · F no posteó.</p>
    <div class="mini-in" style="justify-content:flex-end"><span class="mini">${S.total} turnos</span><button class="btn" id="turnoMenos" ${S.total<=1?'disabled':''}>Quitar el último</button><button class="btn primary" id="turnoMas">Agregar turno extra</button></div>
@@ -1935,7 +1939,7 @@ document.addEventListener('click',e=>{
   if(b.dataset.swap){ const id=b.dataset.swap; if(!SWAP.sel){ SWAP.sel=id; render(); return; } if(SWAP.sel===id){ SWAP.sel=null; render(); return; }
     const a=BY[SWAP.sel], c=BY[id]; const pa=a.puesto, pc=c.puesto; S.puestos=S.puestos||{}; S.puestos[a.id]=pc; S.puestos[c.id]=pa;
     PJS.forEach(p=>{ if(S.puestos[p.id]===p.base) delete S.puestos[p.id]; }); SWAP.sel=null; save(); render(); toast(`${a.nombre.split(' ')[0]} al puesto ${pc} · ${c.nombre.split(' ')[0]} al puesto ${pa}`); return; }
-  if(b.dataset.cycle){ const P=S.posts[S.turno]=S.posts[S.turno]||{}; const cur=P[b.dataset.cycle]||'pend'; P[b.dataset.cycle]=STATUS[(STATUS.indexOf(cur)+1)%STATUS.length]; render(); return; }
+  if(b.dataset.cycle){ const P=S.posts[S.turno]=S.posts[S.turno]||{}; const cur=P[b.dataset.cycle]||'pend'; P[b.dataset.cycle]=STATUS[(STATUS.indexOf(cur)+1)%STATUS.length]; marcaMan(S.turno,b.dataset.cycle,P[b.dataset.cycle]); render(); return; }
   if(b.dataset.trmar){ const k=b.dataset.trmar, r=S.t1[k], g=t1Gen(k); if(r&&g&&!r.trHecho){ const u=fu(idOf(k)); u.tr[g.k]=(u.tr[g.k]||0)+1; r.trHecho=g.k; render(); toast('Uso de '+g.t+' '+g.a+' marcado'); } return; }
   if(b.dataset.trdes){ const k=b.dataset.trdes, r=S.t1[k]; if(r&&r.trHecho){ const u=fu(idOf(k)); u.tr[r.trHecho]=Math.max(0,(u.tr[r.trHecho]||0)-1); delete r.trHecho; render(); } return; }
   if(b.id==='trTodos'){ let n=0; PJS.forEach(p=>t1Keys(p.id).forEach(k=>{ const r=S.t1[k], g=t1Gen(k); if(r&&!r.lazo&&g&&!r.trHecho&&r.dado!==''&&r.dado!=null){ const u=fu(p.id); u.tr[g.k]=(u.tr[g.k]||0)+1; r.trHecho=g.k; n++; } })); render(); toast(n?`${n} usos de trasfondo marcados en las fichas`:'No había usos pendientes'); return; }
@@ -1950,8 +1954,8 @@ document.addEventListener('click',e=>{
   if(b.dataset.faddtr){ const id=b.dataset.faddtr, q=k=>document.querySelector(`[data-fnew="${id}"][data-k="${k}"]`).value.trim(); const a=q('a'); if(!a){ toast('Escribe el ámbito'); return; } fu(id).xtr.push([q('t'),a,Number(q('l'))]); render(); return; }
   if(b.dataset.faddob){ const id=b.dataset.faddob, v=document.querySelector(`[data-fnew="${id}"][data-k="o"]`).value.trim(); if(!v){ toast('Escribe el objeto'); return; } fu(id).xob.push(v); render(); return; }
   if(b.dataset.ed){ const [t,id,acc]=b.dataset.ed.split('|'); const x=S.edic?.[t]?.[id]; if(!x) return; const P=S.posts[t]=S.posts[t]||{};
-    if(acc==='aplicar'){ P[id]=x.stEd; x.dec='aplicar'; } else if(acc==='dejar'){ P[id]=x.st; x.dec='dejar'; } else { P[id]=x.st; delete x.dec; } render(); return; }
-  if(b.dataset.gc){ const t=b.dataset.gt, P=S.posts[t]=S.posts[t]||{}; const cur=P[b.dataset.gc]||'pend'; P[b.dataset.gc]=STATUS[(STATUS.indexOf(cur)+1)%STATUS.length]; render(); return; }
+    if(acc==='aplicar'){ P[id]=x.stEd; x.dec='aplicar'; marcaMan(t,id,P[id]); } else { P[id]=x.st; x.dec='dejar'; marcaMan(t,id,P[id]); } render(); return; }
+  if(b.dataset.gc){ const t=b.dataset.gt, P=S.posts[t]=S.posts[t]||{}; const cur=P[b.dataset.gc]||'pend'; P[b.dataset.gc]=STATUS[(STATUS.indexOf(cur)+1)%STATUS.length]; marcaMan(t,b.dataset.gc,P[b.dataset.gc]); render(); return; }
   if(b.dataset.mc){ const m=S.mt[b.dataset.mc]=S.mt[b.dataset.mc]||{}; m.c=MST[(MST.indexOf(m.c||'pend')+1)%MST.length]; render(); return; }
   if(b.dataset.ronda){ S.ronda=b.dataset.ronda; render(); return; }
   if(b.dataset.export==='estado'){ descargarEstado(); return; }
@@ -1961,7 +1965,7 @@ document.addEventListener('click',e=>{
 });
 function tryPass(){ const v=$('#passIn').value.trim(); if(passOk(v)){ UNLOCK=true; GATE=false; try{ sessionStorage.setItem('mc-master','1'); sessionStorage.setItem('mc-pin',v); }catch(e){} const yo=S.yo; S=leerLocal(KEY)||blank(); S.yo=yo; S.modo='master'; normalizar(); lastStr=''; render(); lastStr=''; toast('Hola, Hana'); cloudLoadMaster(); } else { $('#passMsg').textContent='Esa no es.'; $('#passIn').select(); } }
 document.addEventListener('keydown',e=>{ if(e.key==='Enter'&&e.target.id==='passIn') tryPass(); });
-function estadoPublico(){ const c=JSON.parse(JSON.stringify(S)); delete c._m; delete c.tablas; delete c.edic; delete c.secretos; delete c.modo; delete c.yo; delete c.tabJ; delete c.calc; delete c.tab; delete c.cfg; delete c.fimp; delete c.pg; delete c.plan; delete c.ev; delete c.rt; delete c.rcfg;
+function estadoPublico(){ const c=JSON.parse(JSON.stringify(S)); delete c._m; delete c.tablas; delete c.edic; delete c.secretos; delete c.modo; delete c.yo; delete c.tabJ; delete c.calc; delete c.tab; delete c.cfg; delete c.fimp; delete c.postsMan; delete c.pg; delete c.plan; delete c.ev; delete c.rt; delete c.rcfg;
   c.rcfg={}; Object.entries(S.rcfg||{}).forEach(([k,v])=>{ if(v&&v.pub) c.rcfg[k]={n:v.n,d:v.d,pub:true}; });
   c.evp={}; if(S.ev&&S.ev.list) evAll().forEach(e=>{ if(!S.ev.pub[e.turno]) return; const f=evEfecto(e); if(!f) return; ['base','toque','pres'].forEach(fs=>{ if(e.fase!==fs&&e.fase!=='todas') return; const k=e.pj+'|'+e.ronda+'|'+fs; const x=c.evp[k]=c.evp[k]||{g:0,m:0,t:[]}; x.g+=f.g; x.m+=f.m; x.t.push(e.titulo); }); });
   c.rtp={}; if(rtD()&&S.rt.pub) PJS.forEach(p=>['base','toque','pres'].forEach(fs=>{ const L=rtModsCalc(p.id,S.rt.ronda,fs); if(L.length) c.rtp[p.id+'|'+S.rt.ronda+'|'+fs]=L; }));
