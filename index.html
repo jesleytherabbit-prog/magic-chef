@@ -591,7 +591,7 @@ async function importarForo(){
         const RR=((S.rondas[pl.ronda]=S.rondas[pl.ronda]||{})[id]=S.rondas[pl.ronda][id]||{});
         fs.forEach((f,i)=>{ const cur=(RR[f]=RR[f]||{}); if((cur.dado===''||cur.dado==null)&&dd[i]!=null){ cur.dado=dd[i]; nDp++; } });
         const ev=pl.ev?evAll().find(z=>z.pj===id&&Number(z.turno)===Number(t)):null; if(ev&&(ev.dado===''||ev.dado==null)&&dd[fs.length]!=null){ ev.dado=dd[fs.length]; nDp++; }
-        const esp=fs.length+(ev?1:0); if(esp&&dd.length!==esp) avP.push(`${BY[id].nombre.split(' ')[0]} tiró ${dd.length} d10 y se esperaban ${esp}`); });
+        const esp=fs.length+(ev?1:0); if(esp&&dd.length!==esp&&!(Number(t)>=5&&dd.length===esp+1)) avP.push(`${BY[id].nombre.split(' ')[0]} tiró ${dd.length} d10 y se esperaban ${esp}`); });
       nD+=nDp; if(avP.length) setTimeout(()=>toast('Revisa los dados: '+avP.join('; ')),2500); } }
   { const R=rtD(); if(R&&Number(R.turno)===Number(t)){ let nR=0; Object.entries(o.t1||{}).forEach(([id,x])=>{ if(!BY[id]) return; const dd=(x.dados||[]); if(!dd.length) return; R.pj=R.pj||{}; const c=R.pj[id]=R.pj[id]||{};
         if((c.d20===''||c.d20==null)&&dd[0]!=null){ c.d20=dd[0]; if(!c.t) c.t=Date.now(); if((o.pids||{})[id]&&!c.pid) c.pid=o.pids[id]; nR++; }
@@ -902,6 +902,7 @@ function pgFogon(){ const g=S.pg.fogon, rd=g.ronda, D=RONDAS[rd].d, r2m=(rd==='R
         x.panel={eyebrow:'Tu pareja · Rol '+me.rol,titulo:BY[me.comp].nombre,sub:tr?(tr.nombre+(tr.comida?' · '+tr.comida:'')):'Todavía no les tocó '+U,menu:(tr&&tr.menu)||'',img:imgurURL(tr&&tr.img)||''}; } }
     if(S.ev&&S.ev.list&&S.ev.pub[S.turno]){ const e=evAll().find(z=>z.pj===p.id&&Number(z.turno)===Number(S.turno)); if(e){ const c=evCalc(e); x.ev={titulo:e.titulo,escena:e.escena||'',fase:e.fase,faseN:FASE_N[e.fase],at:e.at,hab:e.hab,dif:Number(e.dif)||9,mod:c.mod,txt:c.au.txt,blanco:c.au.blanco,ef:(!e.ef||e.ef==='grado')?'grado':Number(e.ef),dado:c.pend?null:Number(e.dado)}; } }
     if(rtD()&&S.rt.pub&&S.rt.ronda===rd){ const c=rtCalc(p.id); const xr=(S.rt.pj&&S.rt.pj[p.id])||{}; if(c&&!c.sinComp){ const r=c.r; x.rt={lbl:RTL(),n:c.n,nombre:r.nombre,edicion:r.edicion,desc:r.desc,guia:r.guia,mania:r.mania,bonif:Number(r.bonif)||0,dif:Number(r.dif)||9,truco:r.truco,trucoFase:CMP_FASE[r.truco],mod:c.mod,txt:c.au.txt,blanco:c.au.blanco,dado:c.pend?null:Number(xr.dado),sin:xr.sin||{}}; } else x.rt={sinComp:true}; }
+    if(!r2m&&fases.includes('pres')){ const P=S.platos?.[rd]; x.plato={img:imgurURL(P?.img?.[p.id])||'',nom:P?.nom?.[p.id]||''}; }
     o.pj[p.id]=x; });
   return o; }
 function pgClas(){ const c=S.pg.clas; const rs=Object.keys(RONDAS).filter(r=>c.rondas[r]);
@@ -1165,7 +1166,7 @@ const PJCOL={logan:'#803E3A',volker:'#803E3A',irina:'#4ca07d',derek:'#769aaf',ro
 const CMP_FASE={Cocina:'base',Latrocinio:'toque','Presentación':'pres'};
 function habAt(h){ const i=SKN.indexOf(h); return i<0?'Voluntad':ATL[SKA[i]]; }
 function rollsDe(rd){ const c=(S.rcfg&&S.rcfg[rd]&&S.rcfg[rd].rolls)||{}; return {base:c.base||ROLLS0.base,toque:c.toque||ROLLS0.toque,pres:c.pres||ROLLS0.pres}; }
-const PLAN0={4:{ronda:'R1',fases:['base','toque'],ev:true,titulo:'La cocción'}}; // lo que ya es público del Turno 4 (el post): sirve aunque no hayas cargado el archivo privado
+const PLAN0={4:{ronda:'R1',fases:['base','toque'],ev:true,titulo:'La cocción'},5:{ronda:'R1',fases:['pres'],ev:true,titulo:'Emplatado y veredicto'}}; // lo que ya es público del Turno 4 (el post): sirve aunque no hayas cargado el archivo privado
 function planDe(t){ return (S.plan&&S.plan[t])||PLAN0[t]||null; }
 
 // ----- Eventos aleatorios: una tirada del PJ; si la falla pierde un grado de éxito (o un modificador) en la fase indicada
