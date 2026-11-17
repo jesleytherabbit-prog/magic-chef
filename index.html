@@ -765,18 +765,61 @@ function r2Mapa(){ // la Cuchara elige primero; después el d15 por orden de tir
 function r2TruckN(n){ const R=r2(); return R.trucks.find(t=>Number(t.n)===Number(n))||null; }
 function r2Truck(i){ const n=r2Mapa().asig[i]; return n?r2TruckN(n):null; }
 function r2Pen(truck,t){ return truck&&t.juez?Number(truck.pen?.[t.juez]||0):0; }
-function r2Calc(id,t,truck){ const x=S.r2.tir?.[id]?.[t.k]||{}; const au=r2Auto(id,t);
-  const mod=x.mod!==''&&x.mod!=null?Number(x.mod):au.v; const ot=Number(x.ot)||0, otC=Math.min(7,ot), pen=r2Pen(truck,t);
-  const base={mod,au,ot,otC,pen,capWarn:ot>7,dif:Number(t.dif)||9};
+function r2Calc(id,t,truck){ const x=S.r2.tir?.[id]?.[t.k]||{}; const au=r2Auto(id,t); const E=r2NEf(id);
+  const mod=x.mod!==''&&x.mod!=null?Number(x.mod):au.v; const ot=Number(x.ot)||0, nm=E.mas[t.k]||0, nn=E.menos[t.k]||0, otC=Math.min(7,ot+nm);
+  let pen=r2Pen(truck,t); const pen0=!!(pen&&E.pen0.includes(t.juez)); if(pen0) pen=0;
+  const base={mod,au,ot,otC,pen,pen0,nm,nn,nTxt:E.txt[t.k]||[],capWarn:ot+nm>7,dif:Math.max(Number(t.dif)||9,E.dif[t.k]||0)};
   if(x.dado===''||x.dado==null) return {...base,pend:true};
-  const total=mod+Number(x.dado)+otC+pen; const g=grados(total,base.dif); return {...base,total,g,cli:g.pasa?5+10*g.ge:-5*g.gf}; }
+  const total=mod+Number(x.dado)+otC+nn+pen; const g=grados(total,base.dif); return {...base,total,g,cli:g.pasa?5+10*g.ge:-5*g.gf}; }
 function r2Par(i){ const R=r2(); const p=R.pares[i]; const truck=r2Truck(i); let cli=0,hechas=0,tot=0;
   [['A',p.a],['B',p.b]].forEach(([rol,id])=>{ if(!id||!BY[id]) return; r2Tiradas(rol,p).forEach(t=>{ tot++; const c=r2Calc(id,t,truck); if(!c.pend){ hechas++; cli+=c.cli; } }); });
-  cli=Math.max(0,cli); return {truck,cli,st:Math.min(12,Math.floor(cli/10)),hechas,tot,completo:tot>0&&hechas===tot}; }
+  const nCli=r2NCli(i); cli=Math.max(0,cli+nCli); return {truck,cli,nCli,st:Math.min(12,Math.floor(cli/10)),hechas,tot,completo:tot>0&&hechas===tot}; }
 function r2Ganadores(){ const R=r2(); if(!R) return []; const L=R.pares.map((p,i)=>({i,...r2Par(i)})).filter(x=>x.hechas); if(!L.length) return []; const mx=Math.max(...L.map(x=>x.cli)); return mx>0?L.filter(x=>x.cli===mx).map(x=>x.i):[]; }
 function r2Stars(id){ const r=r2Rol(id); if(!r||!(S.r2.tir)) return null; const c=r2Par(r.i); return c.hechas?c.st:null; }
 function r2Nom(id){ return BY[id]?BY[id].nombre.split(' ')[0]:'—'; }
 function r2Img(t,w,st){ const u=imgurURL(t?.img); return u?`<img alt="" src="${esc(u)}" style="width:${w}px;max-width:100%;border-radius:8px;${st||''}">`:''; }
+// ---------------------------------------------------------------- Ronda 2 · La noche anterior
+// Qué se puede jugar, qué da y qué cuesta vive en el archivo privado de la ronda (R.noche); aquí solo está el motor.
+function r2NCfg(){ const R=r2(); return R&&R.noche&&Array.isArray(R.noche.op)?R.noche:null; }
+function r2NOp(k){ return r2NCfg()?.op.find(o=>o.k===k)||null; }
+function r2NGen(id,tras){ return fTr(id).filter(t=>t.t===tras&&!String(t.a).includes('>')); } // trasfondos generales de ese tipo
+function r2NVen(id,k){ const v=FICHAS[id]?.v?.[k]; return Array.isArray(v)?Number(v[0])||0:Number(v)||0; } // nivel de una Ventaja de la ficha
+function r2NVal(e,c){ if(e.porNivel!=null){ let x=Number(e.porNivel)*(c.nivel||0); if(e.max!=null&&Math.abs(x)>Math.abs(Number(e.max))) x=Number(e.max); return x; } return Number(e.v)||0; }
+function r2NCalc(id){ const C=r2NCfg(); const x=S.r2?.jug?.[id]||{}; const op=x.op?r2NOp(x.op):null; if(!C||!op) return null;
+  if(op.auto){ const nivel=(x.niv!==''&&x.niv!=null)?Number(x.niv):r2NVen(id,op.ven); return {op,auto:true,nivel,dif:Number(C.dif)||9,jue:[],pasa:nivel>0,ge:0,gf:0,vent:nivel>0,cons:nivel>0,sinNivel:!nivel}; } // las Ventajas no se tiran: si la tienes, se cumple
+  const au=r2Auto(id,{at:op.at,hab:op.hab}); const mod=x.mod!==''&&x.mod!=null?Number(x.mod):au.v; const otR=Number(x.ot)||0, ot=Math.min(7,otR); const rec=Number(x.rec)||0; const dif=Number(C.dif)||9;
+  const b={op,au,mod,ot,capWarn:otR>7,rec,dif,jue:(Array.isArray(x.jue)?x.jue:[]).filter(Boolean)};
+  if(x.dado===''||x.dado==null) return {...b,pend:true};
+  const total=mod+Number(x.dado)+ot; const g=grados(total,dif); let L=g.pasa?g.ge:-(g.gf+1); L+=rec; // Recursos: un grado más por nivel
+  const pasa=L>=0, ge=Math.max(0,L), gf=L<0?-L-1:0;
+  return {...b,total,pasa,ge,gf,vent:pasa,cons:pasa||gf>=1}; }
+function r2NTxt(c){ if(!c) return 'No juega'; if(c.auto) return c.sinNivel?'No tiene esa Ventaja':`Nivel ${c.nivel}: ventaja y consecuencia`; if(c.pend) return 'Falta el dado'; return c.pasa?`Superada${c.ge?' con '+c.ge+(c.ge>1?' grados':' grado'):''}: ventaja y consecuencia`:(c.cons?`Fallada con ${c.gf} ${c.gf>1?'grados':'grado'} de fracaso: solo la consecuencia`:'Fallada: no pasa nada'); }
+function r2NEach(c,fn){ [['vent',c.op.ventaja||[]],['cons',c.op.consecuencia||[]]].forEach(([kind,L])=>{ if(!c[kind]) return; L.forEach(e=>{ if(kind==='vent'&&e.minGe!=null&&c.ge<e.minGe) return; fn(e,kind); }); }); }
+function r2NEf(id){ const out={mas:{},menos:{},dif:{},pen0:[],txt:{}}; const r=r2Rol(id); if(!r||!r2NCfg()) return out;
+  const add=(k,t)=>{ (out.txt[k]=out.txt[k]||[]).push(t); };
+  [[id,'yo'],[r.comp,'comp']].forEach(([who,rel])=>{ if(!who) return; const c=r2NCalc(who); if(!c||c.pend) return; const de=rel==='yo'?'tu noche':r2Nom(who);
+    r2NEach(c,e=>{ const a=e.a||'pareja'; if(!(a==='pareja'||a===rel)) return; const lbl=`${c.op.n} (${de})`;
+      if(e.tipo==='mod') (e.tiradas||[]).forEach(k=>{ const v=r2NVal(e,c); if(v>=0) out.mas[k]=(out.mas[k]||0)+v; else out.menos[k]=(out.menos[k]||0)+v; add(k,`${v>0?'+':''}${v} ${lbl}`); });
+      if(e.tipo==='dif') (e.tiradas||[]).forEach(k=>{ out.dif[k]=Math.max(out.dif[k]||0,Number(e.v)||0); add(k,`Dif. ${e.v} · ${lbl}`); });
+      if(e.tipo==='pen0'){ const n=(c.ge>=2&&e.n2)?e.n2:(e.n||1); c.jue.slice(0,n).forEach(j=>{ if(!out.pen0.includes(j)) out.pen0.push(j); }); } }); });
+  return out; }
+function r2NCli(i){ const p=r2()?.pares?.[i]; if(!p||!r2NCfg()) return 0; let v=0;
+  [p.a,p.b].forEach(id=>{ if(!id) return; const c=r2NCalc(id); if(!c||c.pend) return; r2NEach(c,e=>{ if(e.tipo!=='cli') return; let x=e.porNivel!=null?r2NVal(e,c):(Number(e.v)||0)+(Number(e.porGrado)||0)*c.ge; if(e.max!=null&&Math.abs(x)>Math.abs(Number(e.max))) x=Number(e.max); v+=x; }); });
+  return v; }
+function vR2Noche(){ const C=r2NCfg(); if(!C) return ''; const R=r2(); const J=Object.keys(JUECES);
+  const filas=R.pares.flatMap((p,i)=>[p.a,p.b].filter(Boolean).map(id=>{ const x=S.r2.jug?.[id]||{}; const op=x.op?r2NOp(x.op):null; const c=r2NCalc(id); const gen=op?r2NGen(id,op.tras):[];
+    const pen0=op&&(op.ventaja||[]).some(e=>e.tipo==='pen0'); const jue=Array.isArray(x.jue)?x.jue:[];
+    return `<tr><td class="num">${i+1}</td><td><b>${esc(BY[id].nombre)}</b></td>
+      <td><select data-r2n="${id}" data-k="op"><option value="">No juega</option>${C.op.map(o=>`<option value="${esc(o.k)}" ${x.op===o.k?'selected':''}>${esc(o.n)}${(o.auto?r2NVen(id,o.ven):r2NGen(id,o.tras).length)?'':' (no lo tiene)'}</option>`).join('')}</select>
+        ${op&&op.auto?`<div class="mini">Sin tirada · ${esc(op.n)} ${r2NVen(id,op.ven)||'<span class="warn">no la tiene</span>'}</div>`:op?`<div class="mini">${esc(op.at)} + ${esc(op.hab)} · ${gen.length?esc(gen.map(t=>t.a+' '+t.l).join(', ')):'<span class="warn">sin '+esc(op.tras)+' General: solo con Patrón</span>'}</div>`:''}</td>
+      <td>${op&&op.auto?`<label class="mini">Nivel <input type="number" min="0" max="3" data-r2n="${id}" data-k="niv" value="${x.niv??''}" placeholder="${r2NVen(id,op.ven)}" style="width:52px"></label>`:op?`<div class="r2-in"><input type="number" data-r2n="${id}" data-k="mod" value="${x.mod??''}" placeholder="${c?c.au.v:''}" title="${esc(c?c.au.txt:'')}" aria-label="Atributo + Habilidad"><input type="number" data-r2n="${id}" data-k="ot" value="${x.ot??''}" placeholder="0" title="Otros: Específico, Orden de Merlín (+4), Patrón…" aria-label="Otros"><input type="number" min="0" max="3" data-r2n="${id}" data-k="rec" value="${x.rec??''}" placeholder="0" title="Niveles de Recursos que usa" aria-label="Recursos"><input type="number" min="1" max="10" data-r2n="${id}" data-k="dado" value="${x.dado??''}" title="Dado" aria-label="Dado"></div><div class="mini">Atr.+Hab. · Otros · Recursos · Dado</div>`:''}</td>
+      <td>${pen0?[0,1].map(n=>`<select data-r2n="${id}" data-k="jue${n}" aria-label="Juez ${n+1}"><option value="">${n?'2.º juez (con 2 grados)':'Juez'}</option>${J.map(j=>`<option value="${j}" ${jue[n]===j?'selected':''}>${esc(r2Juez(j))}</option>`).join('')}</select>`).join(' '):''}</td>
+      <td>${c&&c.auto?`<span class="chip ${c.vent?'pos':''}">${esc(r2NTxt(c))}</span>`:c?(c.pend?'<span class="mini">Falta el dado</span>':`<b>${c.total}</b> vs ${c.dif}${c.rec?` <span class="chip">Recursos +${c.rec}</span>`:''} · <span class="chip ${c.vent?'pos':c.cons?'neg':''}">${esc(r2NTxt(c))}</span>`):'<span class="mini">—</span>'}${c&&c.capWarn?' <span class="warn">tope +7</span>':''}</td></tr>`; })).join('');
+  return `<div class="panel"><div class="eyebrow">Turno 6 · Una jugada por concursante · Gasta un uso del trasfondo</div><h2>${esc(C.titulo||'La noche anterior')}</h2>
+    <p class="sub">${esc(C.intro||'')}</p>
+    <div class="tw"><table class="work"><thead><tr><th>Par</th><th>Concursante</th><th>Jugada</th><th>Tirada</th><th>Jueces</th><th>Resultado</th></tr></thead><tbody>${filas}</tbody></table></div>
+    <details style="margin-top:10px"><summary class="btn" style="display:inline-block">Qué da y qué cuesta cada jugada</summary><div class="tw" style="margin-top:10px"><table class="work"><thead><tr><th>Jugada</th><th>Tirada</th><th>Ventaja</th><th>Consecuencia</th></tr></thead><tbody>${C.op.map(o=>`<tr><td><b>${esc(o.n)}</b><div class="mini">${esc(o.desc||'')}</div></td><td>${o.auto?'Sin tirada':esc(o.at)+' + '+esc(o.hab)}</td><td>${esc(o.vent||'')}</td><td>${esc(o.cons||'')}</td></tr>`).join('')}</tbody></table></div>
+    <p class="mini">Supera el ${C.dif||9}: ventaja y consecuencia. Falla sin grados de fracaso: no pasa nada. Falla con un grado de fracaso o más: solo la consecuencia. Recursos sube un grado por nivel; Orden de Merlín (+4), Específico y Patrón van en «Otros».</p></details></div>`; }
 function r2Cargar(txt){ let o; try{ o=JSON.parse(txt); }catch(e){ toast('Ese texto no es un archivo de ronda válido'); return; }
   if(!o||!Array.isArray(o.trucks)||!Array.isArray(o.pares)||!Array.isArray(o.tiradas)){ toast('Faltan camiones, parejas o tiradas'); return; }
   const malos=o.pares.flatMap(p=>[p.a,p.b]).filter(id=>id&&!BY[id]); if(malos.length){ toast('No conozco a: '+malos.join(', ')); return; }
@@ -792,6 +835,7 @@ function vR2(){ const R=r2();
   const nPar=R.pares.length, nTr=Object.keys(M.asig).length, nComp=R.pares.filter((p,i)=>r2Par(i).completo).length;
   const celda=(id,t,truck,rol,par)=>{ const q=r2Quien(par,t); if(q!=='AB'&&q!==rol) return '<td class="r2-no">—</td>'; if(!id) return '<td>—</td>'; const x=S.r2.tir?.[id]?.[t.k]||{}; const c=r2Calc(id,t,truck); const key=id+'|'+t.k;
     return `<td><div class="r2-in"><input type="number" data-r2t="${key}" data-k="mod" value="${x.mod??''}" placeholder="${c.au.v}" title="${esc(c.au.txt)}" aria-label="Atributo + Habilidad de ${esc(r2Nom(id))}"><input type="number" data-r2t="${key}" data-k="ot" value="${x.ot??''}" placeholder="0" title="Otros: trasfondos, Cuchara de Oro (+2)…" aria-label="Otros"><input type="number" min="1" max="10" data-r2t="${key}" data-k="dado" value="${x.dado??''}" title="Dado" aria-label="Dado"></div>
+      ${c.nTxt.length||c.pen0?`<div class="mini">${c.nTxt.map(x=>`<span class="chip ${/^\+/.test(x)?'pos':'neg'}">${esc(x)}</span>`).join('')}${c.pen0?`<span class="chip pos">sin penalizador de ${esc(r2Juez(t.juez))}</span>`:''}</div>`:''}
       <div class="mini">${c.pend?`${c.pen?`<span class="chip neg">${c.pen} ${esc(r2Juez(t.juez))}</span>`:''}${c.au.blanco?'<span class="warn">atributo en blanco</span>':''}`:`<b>${c.total}</b> vs ${c.dif} · <span class="chip ${c.cli>0?'pos':c.cli<0?'neg':''}">${c.cli>0?'+':''}${c.cli} clientes</span>${c.pen?` <span class="chip neg">${c.pen} ${esc(r2Juez(t.juez))}</span>`:''}`}${c.capWarn?' <span class="warn">tope +7</span>':''}</div></td>`; };
   const cards=R.pares.map((p,i)=>{ const c=r2Par(i); const tr=c.truck; const elegida=Number(p.elige)>=1;
     const nA=p.a?esc(r2Nom(p.a)):'A', nB=p.b?esc(r2Nom(p.b)):'B';
@@ -804,7 +848,7 @@ function vR2(){ const R=r2();
        <label class="mini">d${N}<input type="number" min="1" max="${N}" data-r2p="${i}" data-k="d15" value="${p.d15??''}" style="width:56px;display:block" ${elegida?'disabled title="Eligió con la Cuchara de Oro"':''}></label>
        <label class="mini">Cuchara de Oro<select data-r2p="${i}" data-k="elige" style="display:block;max-width:150px"><option value="">No la usa</option>${R.trucks.map(t=>`<option value="${t.n}" ${Number(p.elige)===Number(t.n)?'selected':''}>${t.n}. ${esc(t.nombre)}</option>`).join('')}</select></label>
        <div class="r2-tr">${tr?`${r2Img(tr,64,'float:left;margin-right:8px')}<b>${tr.n}. ${esc(tr.nombre)}</b><div class="mini">${esc(tr.comida||'')}${Number(p.d15)&&!elegida&&Number(p.d15)!==Number(tr.n)?` · sacó ${p.d15}, estaba tomado`:''}${elegida?' · elegido con la Cuchara':''}</div><div>${Object.entries(tr.pen||{}).filter(([,v])=>Number(v)).map(([j,v])=>`<span class="chip neg">${v} ${esc(r2Juez(j))}</span>`).join('')}</div>`:`<span class="mini">Esperando el d${N}</span>`}</div>
-       <div class="r2-sc"><b class="num">${c.cli}</b><span>clientes</span><span class="stars">${c.st} ★</span>${gan.includes(i)?'<span class="chip pos">🥄 Cuchara de Oro</span>':''}<span class="mini">${c.hechas}/${c.tot} tiradas</span></div></div>
+       <div class="r2-sc"><b class="num">${c.cli}</b><span>clientes</span><span class="stars">${c.st} ★</span>${gan.includes(i)?'<span class="chip pos">🥄 Cuchara de Oro</span>':''}<span class="mini">${c.hechas}/${c.tot} tiradas</span>${c.nCli?`<span class="chip ${c.nCli>0?'pos':'neg'}">${c.nCli>0?'+':''}${c.nCli} por la noche</span>`:''}</div></div>
      <div class="tw"><table class="work r2-t"><thead><tr><th>Tirada</th><th>${p.a?esc(r2Nom(p.a)):'—'} · A <span class="mini">${r2Tiradas('A',p).length} tiradas</span></th><th>${p.b?esc(r2Nom(p.b)):'—'} · B <span class="mini">${r2Tiradas('B',p).length} tiradas</span></th></tr></thead><tbody>${filas}</tbody></table></div></div>`; }).join('');
   const ganTxt=gan.length?gan.map(i=>`${r2Nom(R.pares[i].a)} y ${r2Nom(R.pares[i].b)}`).join(' · '):'';
   const yaCu=i=>[R.pares[i].a,R.pares[i].b].every(id=>(S.cuchara[id]||[]).some(x=>x.r==='R2'));
@@ -822,6 +866,7 @@ function vR2(){ const R=r2();
     ${ganTxt?`<p style="margin:10px 0 0">🥄 Va ganando la Cuchara de Oro: <b>${esc(ganTxt)}</b>${gan.length>1?' (empate)':''}. ${gan.length===1?(yaCu(gan[0])?'<span class="chip pos">Ya la tienen en la mochila</span>':'<button class="btn" id="r2cu">Dar la Cuchara a los dos</button>'):''}</p>`:''}
     ${sinPar.length?`<p class="mini" style="color:var(--bad)">Sin pareja: ${esc(sinPar.join(', '))}</p>`:''}
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button class="btn" data-export="r2par">Copiar parejas y ${esc(U.toLowerCase())}s (BBCode)</button><button class="btn" data-export="r2res">Copiar resultados (BBCode)</button><button class="btn" id="r2Bak">Copiar el archivo de la ronda</button></div></div>
+   ${vR2Noche()}
    ${cards}
    <div class="panel"><details><summary class="btn" style="display:inline-block">${esc(U)}s (${N}): nombres, menús, imágenes y penalizadores</summary><div class="tw" style="margin-top:10px"><table class="work"><thead><tr><th>Nº</th><th>Nombre</th><th>Comida</th>${Object.keys(JUECES).map(j=>`<th>${esc(r2Juez(j))}</th>`).join('')}<th>Menú</th><th>Imagen</th><th>Pareja</th></tr></thead><tbody>${camiones}</tbody></table></div></details>
     <details style="margin-top:10px"><summary class="btn" style="display:inline-block">Tiradas, dificultades y jueces</summary><div class="tw" style="margin-top:10px"><table class="work"><thead><tr><th>Tirada</th><th>Atributo + Habilidad</th><th>Quién</th><th>Dif.</th><th>Juez (su penalizador)</th></tr></thead><tbody>${tiradas}</tbody></table></div></details>
@@ -898,7 +943,12 @@ function pgFogon(){ const g=S.pg.fogon, rd=g.ronda, D=RONDAS[rd].d, r2m=(rd==='R
       x.f[k]={mod:(R.mod!==''&&R.mod!=null)?Number(R.mod):au.v,auto:au.v,txt:au.txt,blanco:!!au.blanco,mods,extra:Number(R.extra)||0}; });
     if(r2m){ const me=r2Rol(p.id); if(!me){ x.sinPar=true; } else { const tr=r2Truck(me.i); const L=r2Tiradas(me.rol,me.par); const U=(S.r2.unidad||'Destino').toLowerCase();
         x.fases=L.map(t=>({k:t.k,nombre:t.n,juez:r2Juez(t.juez),at:t.at,hab:t.hab,dif:Number(t.dif)||9}));
-        L.forEach(t=>{ const au=r2Auto(p.id,t); const pen=r2Pen(tr,t); const R=(S.r2.tir&&S.r2.tir[p.id]&&S.r2.tir[p.id][t.k])||{}; x.f[t.k]={mod:(R.mod!==''&&R.mod!=null)?Number(R.mod):au.v,auto:au.v,txt:au.txt,blanco:au.blanco,mods:pen?[{v:pen,t:'Tu '+U+': '+tr.nombre,on:true,c:0}]:[],extra:Number(R.ot)||0}; });
+        const NE=r2NEf(p.id); x.fases.forEach(f=>{ if(NE.dif[f.k]) f.dif=Math.max(f.dif,NE.dif[f.k]); });
+        L.forEach(t=>{ const au=r2Auto(p.id,t); let pen=r2Pen(tr,t); if(pen&&NE.pen0.includes(t.juez)) pen=0; const R=(S.r2.tir&&S.r2.tir[p.id]&&S.r2.tir[p.id][t.k])||{};
+          const nm=(NE.txt[t.k]||[]).filter(s=>!/^Dif\./.test(s)).map(s=>{ const m=s.match(/^([+-]?\d+) (.*)$/); return m?{v:Number(m[1]),t:'La noche: '+m[2],on:true,c:0,n:1}:null; }).filter(Boolean);
+          x.f[t.k]={mod:(R.mod!==''&&R.mod!=null)?Number(R.mod):au.v,auto:au.v,txt:au.txt,blanco:au.blanco,mods:(pen?[{v:pen,t:'Tu '+U+': '+tr.nombre,on:true,c:0}]:[]).concat(nm),extra:Number(R.ot)||0}; });
+        const NC=r2NCfg(); if(NC){ const xn=S.r2.jug?.[p.id]||{}; x.noche={titulo:NC.titulo||'La noche anterior',intro:NC.intro||'',dif:Number(NC.dif)||9,sel:xn.op||'',reg:!!(xn.op&&(r2NOp(xn.op)?.auto||(xn.dado!==''&&xn.dado!=null))),
+          op:NC.op.map(o=>{ const au=r2Auto(p.id,{at:o.at,hab:o.hab}); return {k:o.k,n:o.n,auto:!!o.auto,nivel:o.auto?((xn.op===o.k&&xn.niv!==''&&xn.niv!=null)?Number(xn.niv):r2NVen(p.id,o.ven)):0,tras:o.tras,at:o.at,hab:o.hab,desc:o.desc||'',vent:o.vent||'',cons:o.cons||'',mod:au.v,txt:au.txt,gen:o.auto?[]:r2NGen(p.id,o.tras).map(t=>t.a+' '+t.l),ventaja:o.ventaja||[],consecuencia:o.consecuencia||[]}; })}; }
         x.panel={eyebrow:'Tu pareja · Rol '+me.rol,titulo:BY[me.comp].nombre,sub:tr?(tr.nombre+(tr.comida?' · '+tr.comida:'')):'Todavía no les tocó '+U,menu:(tr&&tr.menu)||'',img:imgurURL(tr&&tr.img)||''}; } }
     if(S.ev&&S.ev.list&&S.ev.pub[S.turno]){ const e=evAll().find(z=>z.pj===p.id&&Number(z.turno)===Number(S.turno)); if(e){ const c=evCalc(e); x.ev={titulo:e.titulo,escena:e.escena||'',fase:e.fase,faseN:FASE_N[e.fase],at:e.at,hab:e.hab,dif:Number(e.dif)||9,mod:c.mod,txt:c.au.txt,blanco:c.au.blanco,ef:(!e.ef||e.ef==='grado')?'grado':Number(e.ef),dado:c.pend?null:Number(e.dado)}; } }
     if(rtD()&&S.rt.pub&&S.rt.ronda===rd){ const c=rtCalc(p.id); const xr=(S.rt.pj&&S.rt.pj[p.id])||{}; if(c&&!c.sinComp){ const r=c.r; x.rt={lbl:RTL(),n:c.n,nombre:r.nombre,edicion:r.edicion,desc:r.desc,guia:r.guia,mania:r.mania,bonif:Number(r.bonif)||0,dif:Number(r.dif)||9,truco:r.truco,trucoFase:CMP_FASE[r.truco],mod:c.mod,txt:c.au.txt,blanco:c.au.blanco,dado:c.pend?null:Number(xr.dado),sin:xr.sin||{}}; } else x.rt={sinComp:true}; }
@@ -1971,7 +2021,7 @@ function estadoPublico(){ const c=JSON.parse(JSON.stringify(S)); delete c._m; de
   c.evp={}; if(S.ev&&S.ev.list) evAll().forEach(e=>{ if(!S.ev.pub[e.turno]) return; const f=evEfecto(e); if(!f) return; ['base','toque','pres'].forEach(fs=>{ if(e.fase!==fs&&e.fase!=='todas') return; const k=e.pj+'|'+e.ronda+'|'+fs; const x=c.evp[k]=c.evp[k]||{g:0,m:0,t:[]}; x.g+=f.g; x.m+=f.m; x.t.push(e.titulo); }); });
   c.rtp={}; if(rtD()&&S.rt.pub) PJS.forEach(p=>['base','toque','pres'].forEach(fs=>{ const L=rtModsCalc(p.id,S.rt.ronda,fs); if(L.length) c.rtp[p.id+'|'+S.rt.ronda+'|'+fs]=L; }));
   Object.values(c.fu||{}).forEach(u=>{ delete u.notas; }); Object.values(c.caja||{}).forEach(x=>{ delete x.avisos; });
-  if(!S.r2pub||!r2()){ delete c.r2; delete c.r2res; } else if(!S.r2res){ delete c.r2.tir; c.r2.trucks.forEach(t=>{ delete t.pen; }); } // la Ronda 2 sale solo cuando se publica
+  if(!S.r2pub||!r2()){ delete c.r2; delete c.r2res; } else if(!S.r2res){ delete c.r2.jug; delete c.r2.tir; c.r2.trucks.forEach(t=>{ delete t.pen; }); } // la Ronda 2 sale solo cuando se publica
   Object.keys(c.platos||{}).forEach(r=>{ const P=c.platos[r]; if(!RONDAS[r]) return; if(!P||!P.pub){ delete c.platos[r]; return; } P.lv={}; P.st={}; PJS.forEach(p=>{ if(!P.img?.[p.id]) return; const k=rowCalc(p.id,r); P.st[p.id]=(k.tiene||k.bonus)?Math.min(9,k.stars):null; P.lv[p.id]=plNivel(P.st[p.id]); }); });
   if(!S.t2pub) delete c.t2; // bloqueo del Turno 2: hasta que la máster publique, no sale nada
   else { c.t2=c.t2||{}; PJS.forEach(p=>{ const k=t2Calc(p.id), x=c.t2[p.id]=c.t2[p.id]||{}; x.s=k.sobre;
@@ -2015,6 +2065,7 @@ document.addEventListener('change',e=>{
   else if(d.pgfase){ S.pg.fogon.fases[d.pgfase]=el.checked; }
   else if(d.pgroll){ const i=SKN.indexOf(el.value); S.pg.fogon.rolls[d.pgroll]={hab:el.value,at:i<0?'Voluntad':ATL[SKA[i]]}; }
   else if(d.pgclas){ S.pg.clas.rondas[d.pgclas]=el.checked; }
+  else if(d.r2n&&r2()){ const N=S.r2.jug=S.r2.jug||{}; const o=N[d.r2n]=N[d.r2n]||{}; if(d.k==='op'){ o.op=el.value; if(!el.value) delete N[d.r2n]; } else if(d.k==='jue0'||d.k==='jue1'){ o.jue=Array.isArray(o.jue)?o.jue:['','']; o.jue[+d.k.slice(3)]=el.value; } else o[d.k]=val; }
   else if(d.r2t&&r2()){ const [id,k]=d.r2t.split('|'); const T=S.r2.tir=S.r2.tir||{}; ((T[id]=T[id]||{})[k]=T[id][k]||{})[d.k]=val; }
   else if(d.r2p&&r2()){ const p=S.r2.pares[+d.r2p]; if(!p) return; if(d.k==='d15'&&val!==''&&(p.d15===''||p.d15==null)) p.t=Date.now(); if(d.k==='d15'&&val==='') delete p.t; p[d.k]=val; }
   else if(d.r2q&&r2()){ const [i,k]=d.r2q.split('|'); const p=S.r2.pares[+i]; if(!p) return; p.q=p.q||{}; if(el.value==='') delete p.q[k]; else p.q[k]=el.value; }
