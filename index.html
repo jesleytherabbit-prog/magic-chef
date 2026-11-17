@@ -974,7 +974,8 @@ function pgTruck(){ const R=r2(); const vis=!!S.r2res; const gan=vis?r2Ganadores
     const m=id=>id&&BY[id]?{id,n:r2Nom(id),img:pgImg(id)}:null;
     return {i:i+1,truck:tr?tr.n:0,a:m(p.a),b:m(p.b),tir,cli:vis?c.cli:null,st:vis?c.st:null,gana:gan.includes(i)}; });
   return {vis:true,titulo:R.titulo||'Ronda 2',unidad:R.unidad||'Food truck',res:vis,trucks,pares}; }
-function paginasPublico(){ const out={v:1,at:Date.now(),fogon:{vis:false},clas:{vis:false},truck:{vis:false}};
+function pgAuto(){ const g=S.pg&&S.pg.fogon; if(g&&g.tTurno!==S.turno&&planDe(S.turno)) planAplicar(S.turno); } // al cambiar de turno, el Fogón toma solo las fases y el título del plan
+function paginasPublico(){ pgAuto(); const out={v:1,at:Date.now(),fogon:{vis:false},clas:{vis:false},truck:{vis:false}};
   if(S.pg.fogon.vis&&(pgFases().length||(S.pg.fogon.ronda==='R2'&&r2()))) out.fogon=pgFogon();
   if(S.pg.clas.vis) out.clas=pgClas();
   if(S.pg.truck.vis&&r2()&&S.r2pub) out.truck=pgTruck();
@@ -1217,7 +1218,7 @@ const PJCOL={logan:'#803E3A',volker:'#803E3A',irina:'#4ca07d',derek:'#769aaf',ro
 const CMP_FASE={Cocina:'base',Latrocinio:'toque','Presentación':'pres'};
 function habAt(h){ const i=SKN.indexOf(h); return i<0?'Voluntad':ATL[SKA[i]]; }
 function rollsDe(rd){ const c=(S.rcfg&&S.rcfg[rd]&&S.rcfg[rd].rolls)||{}; return {base:c.base||ROLLS0.base,toque:c.toque||ROLLS0.toque,pres:c.pres||ROLLS0.pres}; }
-const PLAN0={4:{ronda:'R1',fases:['base','toque'],ev:true,titulo:'La cocción'},5:{ronda:'R1',fases:['pres'],ev:true,titulo:'Emplatado y veredicto'}}; // lo que ya es público del Turno 4 (el post): sirve aunque no hayas cargado el archivo privado
+const PLAN0={4:{ronda:'R1',fases:['base','toque'],ev:true,titulo:'La cocción'},5:{ronda:'R1',fases:['pres'],ev:true,titulo:'El emplatado'}}; // lo que ya es público del Turno 4 (el post): sirve aunque no hayas cargado el archivo privado
 function planDe(t){ return (S.plan&&S.plan[t])||PLAN0[t]||null; }
 
 // ----- Eventos aleatorios: una tirada del PJ; si la falla pierde un grado de éxito (o un modificador) en la fase indicada
@@ -1266,7 +1267,7 @@ function datosCargar(txt){ let o; try{ o=JSON.parse(txt); }catch(e){ toast('Ese 
   save(); render(); toast('Cargado: '+hecho.join(', ')); }
 
 // ----- Plan de turnos → página del Fogón
-function planAplicar(t){ const p=planDe(t); if(!p) return false; const g=S.pg.fogon; g.ronda=p.ronda; g.titulo=p.titulo||g.titulo; g.sub=g.sub||'';
+function planAplicar(t){ const p=planDe(t); if(!p) return false; const g=S.pg.fogon; g.ronda=p.ronda; g.titulo=PLAN0[t]?.titulo||p.titulo||g.titulo; g.sub=g.sub||''; g.tTurno=t;
   const R=rollsDe(p.ronda); ['base','toque','pres'].forEach(k=>{ g.fases[k]=(p.fases||[]).includes(k); g.rolls[k]=R[k]; }); return true; }
 
 // ----- Pestaña «Configurar»: rondas y plan de turnos
@@ -1455,7 +1456,7 @@ function xChange(el){ const d=el.dataset; const val=el.type==='checkbox'?el.chec
 
 const TABS=[['pabellon','Pabellón'],['turnos','Turnos'],['despensa','Despensa'],['rondas','Rondas y Estrellas'],['mochila','Mochilas'],['fichas','Fichas'],['asistencia','Asistencia'],['recompensas','Recompensas'],['jurado','Fichas secretas'],['paginas','Páginas'],['platos','Platos'],['config','Configurar'],['extras','Eventos y extras'],['posts','Posts']];
 function renderTabs(){ $('#tabs').innerHTML=TABS.map(([k,n])=>`<button role="tab" aria-selected="${S.tab===k}" data-tab="${k}">${n}</button>`).join(''); }
-function render(){
+function render(){ if(UNLOCK) pgAuto();
   const tws=[...document.querySelectorAll('.tw')].map(e=>[e.scrollLeft,e.scrollTop]); const wy=window.scrollY;
   const ae=document.activeElement; const fk=ae&&ae!==document.body?Object.entries(ae.dataset||{}).map(([k,v])=>`[data-${k.replace(/[A-Z]/g,m=>'-'+m.toLowerCase())}="${CSS.escape(v)}"]`).join('')+(ae.id?'#'+ae.id:''):'';
   render0();
@@ -1504,12 +1505,12 @@ let TOPEN=null; // qué desplegable de Turnos está abierto (no se guarda en la 
 function vTurnos(){
   const abierto=TOPEN??(S.turno<=3?S.turno:'mas');
   const nT1=PJS.filter(p=>S.t1[p.id]?.acc).length, nT2=PJS.filter(p=>{ const e=S.t2?.[p.id]?.ed; return e!==''&&e!=null; }).length, nT3=PJS.filter(p=>S.caja[p.id]?.d50).length;
-  const SEC=[[1,'Turno 1','La llegada',`${nT1}/${PJS.length} con acción`,vT1],[2,'Turno 2','La ronda de Rupert',`${nT2}/${PJS.length} con tirada`,vT2],[3,'Turno 3','La Caja Misteriosa',`${nT3}/${PJS.length} cajas abiertas`,vCaja],['mas','Turnos siguientes',S.turno>=4&&planDe(S.turno)?'Turno '+S.turno+' · cocina y tablas':'Crear la tabla de cada turno',Object.keys(S.tablas||{}).filter(t=>+t>=4).length+' tablas creadas',()=>(S.turno>=4?vCocinaTurno():'')+vistaTabla()]];
+  const SEC=[[1,'Turno 1','La llegada',`${nT1}/${PJS.length} con acción`,vT1],[2,'Turno 2','La ronda de Rupert',`${nT2}/${PJS.length} con tirada`,vT2],[3,'Turno 3','La Caja Misteriosa',`${nT3}/${PJS.length} cajas abiertas`,vCaja],['mas','Turnos siguientes',S.turno>=4&&planDe(S.turno)?'Turno '+S.turno+' · cocina y tablas':'Crear la tabla de cada turno',Object.keys(S.tablas||{}).filter(t=>+t>=4).length+' tablas creadas',()=>(S.turno>=4?vCocinaTurnos():'')+vistaTabla()]];
   return `<section class="view">${SEC.map(([k,t,n,c,fn])=>{ const on=String(abierto)===String(k); const act=k===S.turno||(k==='mas'&&S.turno>3);
     return `<div class="acc ${on?'on':''}"><button class="acc-h" data-topen="${k}" aria-expanded="${on}"><span class="acc-c" aria-hidden="true"></span><b>${t}</b><span class="acc-n">${n}</span>${act?'<span class="acc-act">Turno actual</span>':''}<span class="acc-e">${c}</span></button>${on?`<div class="acc-b">${fn()}</div>`:''}</div>`; }).join('')}</section>`;
 }
 // ----- Turnos de cocina (4 en adelante): una tabla con las tiradas de fase, el imprevisto y las Estrellas del turno
-function vCocinaTurno(){ const t=S.turno, pl=planDe(t); if(!pl||!pl.ronda||pl.ronda==='R2') return '';
+function vCocinaTurno(tt,viejo){ const t=tt??S.turno, pl=planDe(t); if(!pl||!pl.ronda||pl.ronda==='R2') return '';
   const rd=pl.ronda, D=RONDAS[rd], fs=pl.fases||['base','toque','pres']; const X=evX();
   const hayEv=X.list.some(e=>Number(e.turno)===t);
   const head=fs.map(f=>`<th>${FASE_N[f]} · ${FASE_J[f]} <span class="mini">(vs ${D.d[f]})</span></th>`).join('');
@@ -1525,9 +1526,12 @@ function vCocinaTurno(){ const t=S.turno, pl=planDe(t); if(!pl||!pl.ronda||pl.ro
   return `<section class="view"><div class="panel"><div class="eyebrow">Turno ${t} · ${esc(D.n)}</div><h2>${esc(pl.titulo||'Cocina del turno')}</h2>
    <p class="sub">Una fila por concursante: Mod. (Atributo + Habilidad) · Dado · Extra de cada fase, el dado del imprevisto y las Estrellas que lleva en este turno. «Traer del foro» rellena los dados solos, y el imprevisto fallado ya descuenta un grado de éxito.</p>
    ${hayEv?'':`<p class="mini" style="color:var(--bad)">No hay imprevistos cargados para el turno ${t}: carga el archivo privado en Configurar (los dados de imprevisto se anotan después, por orden).</p>`}
-   <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0"><button class="btn primary" id="foroImp2">Traer del foro</button><button class="btn" data-xpapl="${t}">Poner en el Fogón</button></div>
+   ${viejo?'<p class="mini">Turno cerrado: sus datos siguen guardados y se pueden corregir aquí.</p>':`<div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0"><button class="btn primary" id="foroImp2">Traer del foro</button><button class="btn" data-xpapl="${t}">Poner en el Fogón</button></div>`}
    <div class="tw"><table class="work"><thead><tr><th>Concursante</th>${head}<th>Imprevisto</th><th>★ turno</th></tr></thead><tbody>${rows}</tbody></table></div>
    <p class="mini" style="margin-top:8px">Estrellas repartidas en el turno: <b>${tot}</b>. Los platos de la galería se actualizan solos con estos números (Platos).</p></div></section>`; }
+function vCocinaTurnos(){ // la tabla del turno actual y, debajo, las de los turnos de cocina anteriores (cada turno tiene la suya)
+  const prev=[]; for(let t=S.turno-1;t>=4;t--){ const pl=planDe(t); if(pl&&pl.ronda&&pl.ronda!=='R2') prev.push(t); }
+  return vCocinaTurno()+prev.map(t=>{ const pl=planDe(t); return `<details class="panel" style="margin-top:14px"><summary class="btn" style="display:inline-block">Turno ${t} · ${esc(pl.titulo||'')} (${(pl.fases||[]).map(f=>FASE_N[f]).join(' y ')})</summary>${vCocinaTurno(t,true)}</details>`; }).join(''); }
 let DP_SEL=0;
 function vDespensa(){
   const {tom}=cajaMapa(); const n=Object.keys(tom).length;
