@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Magic Chef · del foro al tracker
 // @namespace    https://jesleytherabbit-prog.github.io/magic-chef/
-// @version      2.1
+// @version      2.2
 // @description  Lee los posts y los dados del tema de Magic Chef y los envía al tracker. En la ficha de un concursante, envía la ficha.
 // @match        https://hp-avada-kedavra.foroactivo.com/t*
 // @grant        none
@@ -293,6 +293,7 @@
     const o = {}; const t = String(texto || '');
     for (const m of t.matchAll(/(Base|Toque|Presentaci[oó]n)\s*\([^)]*\)\s*:[^\n]*?dado\s*(\d+)/gi)) { const k = m[1][0].toLowerCase() === 'b' ? 'base' : m[1][0].toLowerCase() === 't' ? 'toque' : 'pres'; if (o[k] == null) o[k] = +m[2]; }
     const ev = t.match(/Imprevisto\s*«[^»]*»\s*:[^\n]*?dado\s*(\d+)/i); if (ev) o.ev = +ev[1];
+    const rs = t.match(/Rescate con Estilo\s*\([^)]*\)\s*:[^\n]*?dado\s*(\d+)/i); if (rs) o.resc = +rs[1];
     // estrellas que dice ganar en su post: «Estrellas del turno: 6» o, si hay una sola fase, su «N estrella(s)»
     const et = t.match(/Estrellas del turno:?\s*(?:\[?[^\d\n]{0,80}?)?(\d+)\b/i); if (et) o.est = +et[1];
     else { const un = [...t.matchAll(/Resultado:[^\n]*?\b(\d+)\s+estrellas?\b/gi)]; if (un.length === 1) o.est = +un[0][1]; }
@@ -312,9 +313,9 @@
     }
     if (fp && fp.est != null) html += `<br><small>Su post dice ${fp.est} ${fp.est === 1 ? 'estrella' : 'estrellas'} en el turno.</small>`;
     if (fp) {
-      const orden = ['base', 'toque', 'pres'].filter(k => fp[k] != null).map(k => fp[k]).concat(fp.ev != null ? [fp.ev] : []);
-      const N = { base: 'Base', toque: 'Toque', pres: 'Presentación', ev: 'Imprevisto' };
-      const txt = ['base', 'toque', 'pres', 'ev'].filter(k => fp[k] != null).map(k => `${N[k]} ${fp[k]}`).join(', ');
+      const orden = ['base', 'toque', 'pres'].filter(k => fp[k] != null).map(k => fp[k]).concat(fp.ev != null ? [fp.ev] : [], fp.resc != null ? [fp.resc] : []);
+      const N = { base: 'Base', toque: 'Toque', pres: 'Presentación', ev: 'Imprevisto', resc: 'Rescate' };
+      const txt = ['base', 'toque', 'pres', 'ev', 'resc'].filter(k => fp[k] != null).map(k => `${N[k]} ${fp[k]}`).join(', ');
       if (d.length && orden.join(',') !== d.slice(0, orden.length).join(',')) { html += `<br><span style="color:#A9473A">⚠ Su post (Fogón) dice ${txt}; Dados Mágicos dio ${d.join(', ')}</span>`; revisar = true; }
       else html += `<br><small>El post del Fogón coincide (${txt}).</small>`;
     }
