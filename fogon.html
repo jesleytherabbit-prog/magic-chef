@@ -207,27 +207,43 @@ function cmpMods(p,id,fk){ const q=cmpRes(p,id); if(!q||q.dado==null) return [];
   else if(fk==='base'||fk==='toque') L.push({v:-2,t:'Desincronizado ('+r.lbl+')'});
   return L; }
 function evEf(p,id,fk){ const q=evRes(p,id); if(!q||q.dado==null||q.pasa||!(q.e.fase===fk||q.e.fase==='todas')) return {g:0,m:0}; return q.e.ef==='grado'?{g:1,m:0}:{g:0,m:Number(q.e.ef)||0}; }
+// ---- Ronda 2 · La noche anterior: la jugada de trasfondo de cada concursante
+function nRes(p,id){ const N=p.noche; if(!N) return null; const s=st(id,'noche'); const k=s.op!==undefined?s.op:N.sel; const op=N.op.find(o=>o.k===k); if(!op) return null;
+  if(op.auto){ const n=op.nivel||0; return {op,auto:true,nivel:n,dif:N.dif,dado:0,pasa:n>0,ge:0,gf:0,vent:n>0,cons:n>0}; }
+  const mod=(s.mod!==undefined&&s.mod!=='')?Number(s.mod):op.mod; const otR=Number(s.otros)||0, ot=Math.min(7,otR), rec=Number(s.rec)||0; const dado=(s.dado===undefined||s.dado==='')?null:Number(s.dado);
+  const o={op,mod,ot,tope:otR>7,rec,dif:N.dif,dado}; if(dado==null) return o;
+  o.total=mod+dado+ot; const g=grados(o.total,N.dif); let L=g.pasa?g.ge:-(g.gf+1); L+=rec; o.pasa=L>=0; o.ge=Math.max(0,L); o.gf=L<0?-L-1:0; o.vent=o.pasa; o.cons=o.pasa||o.gf>=1; return o; }
+function nEach(q,fn){ [['vent',q.op.ventaja],['cons',q.op.consecuencia]].forEach(([k,L])=>{ if(!q[k]) return; (L||[]).forEach(e=>{ if(k==='vent'&&e.minGe!=null&&q.ge<e.minGe) return; fn(e); }); }); }
+function nVal(e,q){ if(e.porNivel!=null){ let x=Number(e.porNivel)*(q.nivel||0); if(e.max!=null&&Math.abs(x)>Math.abs(Number(e.max))) x=Number(e.max); return x; } return Number(e.v)||0; }
+function nLocal(p,id,fk){ const out={m:[],dif:0}; if(!p.noche||p.noche.reg) return out; const q=nRes(p,id); if(!q||q.dado==null) return out; // si Hana ya la registró, el tracker ya la suma
+  nEach(q,e=>{ const a=e.a||'pareja'; if(a==='comp') return; if((e.tiradas||[]).includes(fk)){ if(e.tipo==='mod') out.m.push({v:nVal(e,q),t:'La noche: '+q.op.n}); if(e.tipo==='dif') out.dif=Math.max(out.dif,Number(e.v)||0); } }); return out; }
+function nTxt(q){ if(q.auto) return q.nivel?`${q.op.n} ${q.nivel}: sin tirada, ganas la ventaja y pagas la consecuencia.`:`No tienes ${q.op.n} en tu ficha.`; if(q.pasa) return `Superada${q.ge?' con '+q.ge+(q.ge>1?' grados':' grado')+' de éxito':''}: ganas la ventaja y pagas la consecuencia.`; return q.cons?`Fallada con ${q.gf} ${q.gf>1?'grados':'grado'} de fracaso: no hay ventaja, pero pagas la consecuencia.`:'Fallada: no pasa nada (el uso del trasfondo se gasta igual).'; }
+
 function calc(p,fz,id){ const x=p.f[fz.k]; const s=st(id,fz.k); const mod=(s.mod!==undefined&&s.mod!=='')?Number(s.mod):x.mod;
   let suma=0; x.mods.forEach((m,i)=>{ const on=(s.off&&(i in s.off))?s.off[i]:m.on; if(on) suma+=m.v; });
-  const rm=cmpMods(p,id,fz.k); rm.forEach(m=>{ suma+=m.v; }); const ef=evEf(p,id,fz.k); suma+=ef.m;
-  const otros=Number(s.otros)||0; const raw=suma+x.extra+otros; const ext=Math.min(7,raw);
+  const nl=nLocal(p,id,fz.k); const rm=cmpMods(p,id,fz.k).concat(nl.m.filter(m=>m.v>0)); rm.forEach(m=>{ suma+=m.v; }); const ef=evEf(p,id,fz.k); suma+=ef.m;
+  const nNeg=nl.m.filter(m=>m.v<0); nNeg.forEach(m=>rm.push(m)); const neg=nNeg.reduce((a,m)=>a+m.v,0); const dif=Math.max(fz.dif,nl.dif);
+  const otros=Number(s.otros)||0; const raw=suma+x.extra+otros; const ext=Math.min(7,raw)+neg;
   const dado=(s.dado===undefined||s.dado==='')?null:Number(s.dado);
-  const o={mod,suma,otros,raw,ext,tope:raw>7,dado,rm,evM:ef.m,evG:ef.g};
+  const o={mod,suma,otros,raw,ext,tope:raw>7,dado,rm,evM:ef.m,evG:ef.g,dif};
   if(dado==null) return o;
-  o.total=mod+dado+ext; o.g=grados(o.total,fz.dif); o.est=o.g.pasa?Math.min(3,1+o.g.ge):0; if(ef.g&&o.est>0) o.est=Math.max(0,o.est-ef.g);
+  o.total=mod+dado+ext; o.g=grados(o.total,dif); o.est=o.g.pasa?Math.min(3,1+o.g.ge):0; if(ef.g&&o.est>0) o.est=Math.max(0,o.est-ef.g);
   o.cli=o.g.pasa?5+10*o.g.ge:-5*o.g.gf; return o; }
 
 function plantilla(id){ const p=DATA.pj[id]; let t=`[b]${DATA.titulo} · ${p.n}[/b]\n`;
   if(p.ing) t+=`Ingrediente: ${p.ing.nombre} (nº ${p.ing.n})\n`;
   const q=cmpRes(p,id); if(q&&q.dado!=null) t+=`${cap(q.r.lbl)}: ${q.r.nombre} (nº ${q.r.n}): Carisma + Coordinación = ${q.mod}, dado ${q.dado} = [b]${q.total}[/b] contra ${q.r.dif}: ${q.sync?'sincronizados':'desincronizados'}\n`;
   const v=evRes(p,id); if(v&&v.dado!=null) t+=`Imprevisto «${v.e.titulo}»: ${v.e.at} + ${v.e.hab} = ${v.mod}, dado ${v.dado} = [b]${v.total}[/b] contra ${v.e.dif}: ${v.pasa?'superado':'fallado'}\n`;
+  const nq=p.noche?nRes(p,id):null; if(nq&&nq.auto&&nq.nivel) t+=`[b]${p.noche.titulo}[/b] · ${nq.op.n} ${nq.nivel} (sin tirada)\nVentaja: ${nq.op.vent}\nConsecuencia: ${nq.op.cons}\n`;
+  else if(nq&&nq.dado!=null&&!nq.auto) t+=`[b]${p.noche.titulo}[/b] · ${nq.op.n}: ${nq.op.at} + ${nq.op.hab} = ${nq.mod}, dado ${nq.dado}${nq.ot?`, otros ${sg(nq.ot)}`:''} = [b]${nq.total}[/b] contra ${nq.dif}${nq.rec?` (Recursos +${nq.rec} ${nq.rec>1?'grados':'grado'})`:''}\n[i]${nTxt(nq)}[/i]\n${nq.vent?`Ventaja: ${nq.op.vent}\n`:''}${nq.cons?`Consecuencia: ${nq.op.cons}\n`:''}`;
+  else if(p.noche&&!nq) t+=`[b]${p.noche.titulo}[/b]: no juego\n`;
   t+='\n'; const r2=DATA.tipo==='r2'; let sum=0, hay=0;
   fasesDe(p).forEach(fz=>{ const c=calc(p,fz,id); const x=p.f[fz.k];
     if(c.dado==null){ t+=`[b]${fz.nombre}[/b] (${fz.juez}): falta el dado\n\n`; return; }
     const ms=x.mods.filter((m,i)=>{ const s=st(id,fz.k); return (s.off&&(i in s.off))?s.off[i]:m.on; }).map(m=>`${sg(m.v)} ${m.t}`);
     c.rm.forEach(m=>ms.push(`${sg(m.v)} ${m.t}`)); if(c.evM) ms.push(`${sg(c.evM)} imprevisto`);
     if(x.extra) ms.push(`${sg(x.extra)} extra del máster`); if(c.otros) ms.push(`${sg(c.otros)} otros`);
-    t+=`[b]${fz.nombre}[/b] (${fz.juez}): ${fz.at} + ${fz.hab} = ${c.mod}, dado ${c.dado}${c.ext?`, modificadores ${sg(c.ext)}${c.tope?' (tope +7)':''}`:''} = [b]${c.total}[/b] contra ${fz.dif}\n`;
+    t+=`[b]${fz.nombre}[/b] (${fz.juez}): ${fz.at} + ${fz.hab} = ${c.mod}, dado ${c.dado}${c.ext?`, modificadores ${sg(c.ext)}${c.tope?' (tope +7)':''}`:''} = [b]${c.total}[/b] contra ${c.dif}\n`;
     if(c.evG&&c.est!=null) t+=`[i]El imprevisto quita un grado de éxito.[/i]\n`;
     if(ms.length) t+=`[i]${ms.join(' · ')}[/i]\n`;
     const g=c.g; const res=g.pasa?(g.ge?`superada con ${g.ge} ${g.ge>1?'grados':'grado'} de éxito`:'superada'):(g.gf?`fallada con ${g.gf} ${g.gf>1?'grados':'grado'} de fracaso`:'fallada');
@@ -237,8 +253,9 @@ function plantilla(id){ const p=DATA.pj[id]; let t=`[b]${DATA.titulo} · ${p.n}[
   if(hay>1) t+=r2?`[b]Clientes del turno: ${sum>0?'+':''}${sum}[/b]`:`[b]Estrellas del turno:[/b] ${sum?ESTR_BB.repeat(sum)+' ':''}[b]${sum}[/b]`;
   return t.trim(); }
 
-function dynChips(p,fz,id){ const x=p.f[fz.k]; const rm=cmpMods(p,id,fz.k).map(m=>`<span class="chip ${m.v>0?'pos':'neg'}">${sg(m.v)} ${esc(m.t)}</span>`).join(''); const em=evEf(p,id,fz.k).m; const ev=em?`<span class="chip neg">${sg(em)} imprevisto</span>`:'';
-  return rm+ev+((!x.mods.length&&!x.extra&&!rm&&!ev)?'<span class="mini">Sin modificadores por ahora.</span>':''); }
+function dynChips(p,fz,id){ const x=p.f[fz.k]; const nl=nLocal(p,id,fz.k); const rm=cmpMods(p,id,fz.k).concat(nl.m).map(m=>`<span class="chip ${m.v>0?'pos':'neg'}">${sg(m.v)} ${esc(m.t)}</span>`).join(''); const em=evEf(p,id,fz.k).m; const ev=em?`<span class="chip neg">${sg(em)} imprevisto</span>`:'';
+  const nd=nl.dif>fz.dif?`<span class="chip neg">Dificultad ${nl.dif} por la noche</span>`:'';
+  return rm+ev+nd+((!x.mods.length&&!x.extra&&!rm&&!ev)?'<span class="mini">Sin modificadores por ahora.</span>':''); }
 function faseHTML(p,fz,id){ const x=p.f[fz.k]; const s=st(id,fz.k);
   const chips=x.mods.map((m,i)=>{ const on=(s.off&&(i in s.off))?s.off[i]:m.on;
     const cls=`chip ${m.v>0?'pos':'neg'} ${on?'':'off'}`;
@@ -254,6 +271,9 @@ function faseHTML(p,fz,id){ const x=p.f[fz.k]; const s=st(id,fz.k);
     <div class="res" id="res-${fz.k}" aria-live="polite"></div></div>`; }
 
 function pintarExtras(id){ const p=DATA.pj[id];
+  const en=$('#res-noche'); if(en&&p.noche){ const q=nRes(p,id); if(!q||q.dado==null){ en.className='res'; en.innerHTML='<span class="mini">Escribe el dado de tu jugada y te digo cómo te fue.</span>'; }
+    else if(q.auto){ en.className='res '+(q.vent?'ok':''); en.innerHTML=`<span class="ver">${esc(nTxt(q))}</span>`; }
+    else { en.className='res '+(q.vent?'ok':q.cons?'ko':''); en.innerHTML=`<span class="tot num">${q.total}</span><span class="mini">contra ${q.dif}${q.rec?' · Recursos +'+q.rec:''}</span><span class="ver">${esc(nTxt(q))}</span>${q.tope?'<span class="aviso" style="flex-basis:100%">Los modificadores externos llegan al tope de +7.</span>':''}`; } }
   const q=cmpRes(p,id); const er=$('#res-rt'); if(er&&q){ if(q.dado==null){ er.className='res'; er.innerHTML=`<span class="mini">Escribe el dado de sincronía que sacaste y te digo cómo te fue con tu ${q.r.lbl}.</span>`; }
     else { const g=q.g; const ge=Math.min(2,g.ge); er.className='res '+(q.sync?'ok':'ko'); er.innerHTML=`<span class="tot num">${q.total}</span><span class="mini">contra ${q.r.dif}</span><span class="ver">${q.sync?`¡Sincronizados!${ge?` +${ge} a la Base por la sincronía.`:''}`:'Desincronizados'}</span>`; } }
   const v=evRes(p,id); const ee=$('#res-ev'); if(ee&&v){ if(v.dado==null){ ee.className='res'; ee.innerHTML='<span class="mini">Escribe el dado del imprevisto y te digo cómo te fue.</span>'; }
@@ -266,7 +286,7 @@ function pintarRes(id){ const p=DATA.pj[id]; let suma=0, hay=false; const r2=DAT
     hay=true; suma+=r2?c.cli:c.est; const g=c.g;
     const txt=g.pasa?(g.ge?`Superada con ${g.ge} ${g.ge>1?'grados':'grado'} de éxito`:'Superada'):(g.gf?`Fallada con ${g.gf} ${g.gf>1?'grados':'grado'} de fracaso`:'Fallada');
     el.className='res '+(g.pasa?'ok':'ko');
-    el.innerHTML=`<span class="tot num">${c.total}</span><span class="mini">contra ${fz.dif}</span><span class="ver">${txt}</span>${r2?`<span class="estr num" aria-label="${c.cli} clientes">${c.cli>0?'+':''}${c.cli} clientes</span>`:`<span class="estr" aria-label="${c.est} de 3 estrellas">${ESTR_IMG.repeat(c.est)}${ESTR_OFF.repeat(3-c.est)}</span>`}${c.evG&&g.pasa?'<span class="aviso" style="flex-basis:100%">El imprevisto te quita un grado de éxito en esta fase.</span>':''}${c.tope?'<span class="aviso" style="flex-basis:100%">Los modificadores externos llegan al tope de +7.</span>':''}`; });
+    el.innerHTML=`<span class="tot num">${c.total}</span><span class="mini">contra ${c.dif}</span><span class="ver">${txt}</span>${r2?`<span class="estr num" aria-label="${c.cli} clientes">${c.cli>0?'+':''}${c.cli} clientes</span>`:`<span class="estr" aria-label="${c.est} de 3 estrellas">${ESTR_IMG.repeat(c.est)}${ESTR_OFF.repeat(3-c.est)}</span>`}${c.evG&&g.pasa?'<span class="aviso" style="flex-basis:100%">El imprevisto te quita un grado de éxito en esta fase.</span>':''}${c.tope?'<span class="aviso" style="flex-basis:100%">Los modificadores externos llegan al tope de +7.</span>':''}`; });
   $('#estTot').innerHTML=hay?`<b class="num">${r2?(suma>0?'+':'')+suma+' clientes':suma+'</b> '+ESTR_IMG+'<b>'}</b>`:'<span class="mini">—</span>';
   $('#plant').value=plantilla(id); pintarCampana(); }
 
@@ -292,7 +312,16 @@ function pintar(){ if(!DATA) return; const ids=Object.keys(DATA.pj).sort((a,b)=>
       <p style="margin:8px 0 0">Tu tirada: <b>${esc(p.ev.at)} + ${esc(p.ev.hab)}</b> contra <b>${p.ev.dif}</b>. Si la superas, no pasa nada. Si la fallas, ${p.ev.ef==='grado'?'pierdes un grado de éxito':'tienes '+sg(p.ev.ef)+' al total'} en ${p.ev.fase==='todas'?'todas las fases':'la fase '+esc(p.ev.faseN)}.</p>
       <div class="campos" style="margin-top:8px"><label>Atributo + Habilidad<input type="number" inputmode="numeric" data-in="ev|mod" value="${st(YO,'ev').mod??''}" placeholder="${p.ev.mod}"></label><label>Dado del imprevisto<input type="number" inputmode="numeric" min="1" max="10" data-in="ev|dado" value="${p.ev.dado!=null?p.ev.dado:(st(YO,'ev').dado??'')}" ${p.ev.dado!=null?'readonly':''} placeholder="1 a 10"></label></div>
       <div class="mini" style="margin-top:6px">En tu ficha: ${esc(p.ev.txt)}.${p.ev.blanco?' <span class="aviso">Tu ficha tiene el atributo en blanco y cuenta 0: avísale a Hana.</span>':''}</div><div class="res" id="res-ev" aria-live="polite"></div></div>`:'';
-  $('#app').innerHTML=sel+`<div class="panel"><div class="yo"><img alt="" src="${esc(foto(YO,p))}"><div><div class="tag">${esc(p.tag)}</div><h2>${esc(p.n)}</h2></div></div></div>`+ingP+pn+rt+ev+
+  const N=p.noche; const nst=st(YO,'noche'); const nk=nst.op!==undefined?nst.op:(N?N.sel:''); const nop=N?N.op.find(o=>o.k===nk):null;
+  const noche=N?`<div class="panel"><div class="eyebrow">Turno 6 · Opcional · Gasta un uso del trasfondo</div><h2>${esc(N.titulo)}</h2><p class="sub">${esc(N.intro)}</p>
+      <label style="margin-top:10px">Tu jugada<select data-in="noche|op"><option value="" ${!nk?'selected':''}>No juego</option>${N.op.map(o=>`<option value="${esc(o.k)}" ${nk===o.k?'selected':''}>${esc(o.n)}${o.auto?(o.nivel?' (Ventaja, sin tirada)':' (no la tienes)'):(o.gen.length?'':' (no lo tienes: solo con Patrón)')}</option>`).join('')}</select></label>
+      ${nop?`<p style="margin:8px 0 0">${esc(nop.desc)}</p><p style="margin:6px 0 0"><span class="chip pos">Ventaja</span> ${esc(nop.vent)}</p><p style="margin:6px 0 0"><span class="chip neg">Consecuencia</span> ${esc(nop.cons)}</p>
+      ${nop.auto?`<p style="margin:8px 0 0">${nop.nivel?`Es una Ventaja: no se tira. Tienes <b>${esc(nop.n)} ${nop.nivel}</b>.`:`<span class="aviso">No tienes ${esc(nop.n)} en tu ficha.</span>`}</p><div class="res" id="res-noche" aria-live="polite"></div>`:`
+      <p style="margin:8px 0 0">Tu tirada: <b>${esc(nop.at)} + ${esc(nop.hab)}</b> contra <b>${N.dif}</b>. ${nop.gen.length?'Tus generales de '+esc(nop.tras)+': '+esc(nop.gen.join(', '))+'.':'<span class="aviso">No tienes '+esc(nop.tras)+' General: solo puedes jugarlo con Patrón.</span>'}</p>
+      <div class="campos" style="margin-top:8px"><label>Atributo + Habilidad<input type="number" inputmode="numeric" data-in="noche|mod" value="${nst.mod??''}" placeholder="${nop.mod}"></label><label>Dado del foro<input type="number" inputmode="numeric" min="1" max="10" data-in="noche|dado" value="${nst.dado??''}" placeholder="1 a 10"></label>
+        <label>Otros (Específico, Orden de Merlín, Patrón)<input type="number" inputmode="numeric" data-in="noche|otros" value="${nst.otros??''}" placeholder="0"></label><label>Niveles de Recursos que usas<input type="number" inputmode="numeric" min="0" max="3" data-in="noche|rec" value="${nst.rec??''}" placeholder="0"></label></div>
+      <div class="mini" style="margin-top:6px">En tu ficha: ${esc(nop.txt)}. Supera el ${N.dif}: ventaja y consecuencia. Falla sin grados de fracaso: no pasa nada. Falla con un grado de fracaso o más: solo la consecuencia.</div><div class="res" id="res-noche" aria-live="polite"></div>`}`:''}</div>`:'';
+  $('#app').innerHTML=sel+`<div class="panel"><div class="yo"><img alt="" src="${esc(foto(YO,p))}"><div><div class="tag">${esc(p.tag)}</div><h2>${esc(p.n)}</h2></div></div></div>`+ingP+pn+noche+rt+ev+
    (p.sinPar?'':`<div class="panel"><h2>Tus tiradas</h2><p class="sub">Tira los dados en el foro y escribe aquí el resultado. Los modificadores ya están sumados.</p>${fasesDe(p).map(fz=>faseHTML(p,fz,YO)).join('')}
      <div class="panel total-est" style="margin-top:20px"><span>${R2?'Clientes que sumas (provisorio)':'Estrellas de este turno (provisorio)'}</span><span id="estTot"></span></div>
      <p class="mini">Esto es una cuenta orientativa: el veredicto lo da Hana cuando lee tu post.</p></div>`)+
@@ -303,6 +332,7 @@ function pintar(){ if(!DATA) return; const ids=Object.keys(DATA.pj).sort((a,b)=>
 
 document.addEventListener('change',e=>{ const el=e.target;
   if(el.id==='yoSel'){ YO=el.value||null; guardar(); pintar(); return; }
+  if(el.dataset.in==='noche|op'){ st(YO,'noche').op=el.value; guardar(); pintar(); return; }
   if(el.dataset.mod){ const [k,i]=el.dataset.mod.split('|'); const s=st(YO,k); (s.off=s.off||{})[i]=el.checked; guardar(); pintar(); } });
 document.addEventListener('input',e=>{ const el=e.target; if(!el.dataset.in) return; const [k,f]=el.dataset.in.split('|'); st(YO,k)[f]=el.value; guardar(); pintarRes(YO); });
 document.addEventListener('click',e=>{ if(e.target.id!=='cop') return; const t=$('#plant'); const ok=()=>{ $('#copMsg').textContent='Copiado'; setTimeout(()=>{ const m=$('#copMsg'); if(m) m.textContent=''; },1600); };
