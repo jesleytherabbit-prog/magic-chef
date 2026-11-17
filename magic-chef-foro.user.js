@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Magic Chef · del foro al tracker
 // @namespace    https://jesleytherabbit-prog.github.io/magic-chef/
-// @version      2.0
+// @version      2.1
 // @description  Lee los posts y los dados del tema de Magic Chef y los envía al tracker. En la ficha de un concursante, envía la ficha.
 // @match        https://hp-avada-kedavra.foroactivo.com/t*
 // @grant        none
@@ -299,15 +299,16 @@
     return Object.keys(o).length ? o : null;
   }
   // Tiradas esperadas por turno de cocina: cuántas fases tiran y quién tiene imprevisto (se actualiza con cada turno nuevo)
-  const COCINA = { 4: { fases: 2, ev: ['robert', 'emma', 'nick', 'logan'] } };
+  const COCINA = { 4: { fases: 2, ev: ['robert', 'emma', 'nick', 'logan'] }, 5: { fases: 1, ev: ['irina', 'hiraki', 'derek', 'elizabeth'], resc: true } };
   function cocinaDesc(x, id, turno) {
     x = x || {}; const d = (x.d10 && x.d10.length) ? x.d10 : (x.dados || []); const fp = x.fogon || null;
     let html = d.length ? `d10 en orden: <b>${d.join(' · ')}</b> <small>(el tracker los reparte: fases y, al final, el imprevisto)</small>` : '—';
     let revisar = !d.length;
     const E = COCINA[turno]; if (E && id && d.length) {
       const esp = E.fases + (E.ev.includes(id) ? 1 : 0);
-      if (d.length !== esp) { html += `<br><span style="color:#A9473A">⚠ Esperaba ${esp} d10 (${E.fases} de cocina${E.ev.includes(id) ? ' + el imprevisto' : ''}) y tiró ${d.length}</span>`; revisar = true; }
-      else if (E.ev.includes(id)) html += `<br><small>Imprevisto: dado ${d[d.length - 1]}</small>`;
+      if (d.length !== esp && !(E.resc && d.length === esp + 1)) { html += `<br><span style="color:#A9473A">⚠ Esperaba ${esp} d10 (${E.fases} de cocina${E.ev.includes(id) ? ' + el imprevisto' : ''}) y tiró ${d.length}</span>`; revisar = true; }
+      else if (E.ev.includes(id)) html += `<br><small>Imprevisto: dado ${d[E.fases]}</small>`;
+      if (E.resc && d.length === esp + 1) html += `<br><small>Dado extra al final: Rescate con Estilo (${d[d.length - 1]}).</small>`;
     }
     if (fp && fp.est != null) html += `<br><small>Su post dice ${fp.est} ${fp.est === 1 ? 'estrella' : 'estrellas'} en el turno.</small>`;
     if (fp) {
