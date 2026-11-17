@@ -194,7 +194,7 @@ function faltan(iso){ if(!iso) return ''; const ms=new Date(iso)-Date.now(); if(
 function st(id,k){ return (ST[id]=ST[id]||{})[k]=(ST[id][k]||{}); }
 function cap(t){ return t?t[0].toUpperCase()+t.slice(1):''; }
 function fasesDe(p){ return p.fases||DATA.fases; }
-function evRes(p,id){ const e=p.ev; if(!e) return null; const s=st(id,'ev'); const mod=(s.mod!==undefined&&s.mod!=='')?Number(s.mod):e.mod;
+function evRes(p,id){ const e=p.ev; if(!e) return null; const s=st(id,'ev'); const mod=(s.mod!==undefined&&s.mod!=='')?Number(s.mod):(Number(e.mod)||0);
   const dado=e.dado!=null?e.dado:((s.dado===undefined||s.dado==='')?null:Number(s.dado));
   if(dado==null) return {mod,dado:null,e};
   const total=mod+dado; const g=grados(total,e.dif); return {mod,dado,total,g,pasa:g.pasa,e}; }
@@ -365,13 +365,16 @@ function pintarCampana(){ const on=presModo(); const es=document.querySelector('
     :!abierta?'Bajo la campana<b>Escribe el dado de tu Presentación y Tuck la levanta</b>'
     :`${pl.nom?esc(pl.nom):'Tu plato'}<b>Presentación: ${c.est?ESTR_IMG.repeat(c.est):'sin estrellas'}</b>`; }
 
+const EV_POST={5:{irina:['La campana cerrada','Destreza','Latrocinio',12],hiraki:['Los posos de Rupert','Inteligencia','Adivinación',12],derek:['La carta del Club','Carisma','Subterfugio',12],elizabeth:['Los hongos saltarines','Vigor','Atletismo',9]}}; // los mismos que anuncia el post del foro
+function evRespaldo(){ const T=EV_POST[DATA&&DATA.turno]; if(!T||DATA.tipo==='r2') return; Object.entries(T).forEach(([id,e])=>{ const p=DATA.pj[id]; if(!p||p.ev) return;
+  p.ev={titulo:e[0],escena:'',fase:'pres',faseN:'Presentación',at:e[1],hab:e[2],dif:e[3],mod:'',txt:'escribe tu '+e[1]+' + '+e[2]+' en la casilla',blanco:false,ef:'grado',dado:null}; }); }
 async function ciclo(primera){
   try{ const o=await cargar();
     if(!o||!o.fogon||!o.fogon.vis){ DATA=null; pintarCampana(); espera('Los fogones todavía están apagados','Hana enciende el fuego cuando empieza el turno. Esta página se abre sola, no hace falta recargar.'); }
-    else if((o.at!==AT||primera)&&!(document.activeElement&&document.activeElement.dataset&&document.activeElement.dataset.in&&!primera)){ AT=o.at; const nuevo=!DATA||DATA.turno!==o.fogon.turno||DATA.ronda!==o.fogon.ronda; DATA=o.fogon;
+    else if((o.at!==AT||primera)&&!(document.activeElement&&document.activeElement.dataset&&document.activeElement.dataset.in&&!primera)){ AT=o.at; const nuevo=!DATA||DATA.turno!==o.fogon.turno||DATA.ronda!==o.fogon.ronda; DATA=o.fogon; evRespaldo();
       if(nuevo){ const g=leer(); const prev=(g.st||{})[DATA.ronda+'-'+DATA.turno]||{}; Object.keys(ST).forEach(k=>delete ST[k]); Object.assign(ST,prev); if(primera&&g.yo) YO=g.yo; }
       pintar(); }
-    $('#pie').textContent='Versión 17/11 · 11:15 · '+(o&&o.at?'Datos de '+new Date(o.at).toLocaleString('es',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'');
+    $('#pie').textContent='Versión 17/11 · 11:20 · '+(o&&o.at?'Datos de '+new Date(o.at).toLocaleString('es',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'');
   }catch(e){ if(!DATA) espera('No pude conectar con la cocina','Revisa tu conexión: lo intento de nuevo en unos segundos.'); }
 }
 ciclo(true); setInterval(()=>ciclo(false),45000);
