@@ -219,7 +219,9 @@ function nLocal(p,id,fk){ const out={m:[],dif:0}; if(!p.noche||p.noche.reg) retu
   nEach(q,e=>{ const a=e.a||'pareja'; if(a==='comp') return; if((e.tiradas||[]).includes(fk)){ if(e.tipo==='mod') out.m.push({v:nVal(e,q),t:'La noche: '+q.op.n}); if(e.tipo==='dif') out.dif=Math.max(out.dif,Number(e.v)||0); } }); return out; }
 function nTxt(q){ if(q.auto) return q.nivel?`${q.op.n} ${q.nivel}: sin tirada, ganas la ventaja y pagas la consecuencia.`:`No tienes ${q.op.n} en tu ficha.`; if(q.pasa) return `Superada${q.ge?' con '+q.ge+(q.ge>1?' grados':' grado')+' de éxito':''}: ganas la ventaja y pagas la consecuencia.`; return q.cons?`Fallada con ${q.gf} ${q.gf>1?'grados':'grado'} de fracaso: no hay ventaja, pero pagas la consecuencia.`:'Fallada: no pasa nada (el uso del trasfondo se gasta igual).'; }
 
-function calc(p,fz,id){ const x=p.f[fz.k]; const s=st(id,fz.k); const mod=(s.mod!==undefined&&s.mod!=='')?Number(s.mod):x.mod;
+function arteDe(x,s){ if(!x.arts||!x.arts.length) return null; const a=x.arts.find(z=>z[0]===s.arte)||x.arts[0]; return a; } // Arte/Artesanía: la que elija y justifique
+function habDe(p,fz,id){ const x=p.f[fz.k]; const a=arteDe(x,st(id,fz.k)); return a?`Arte/Artesanía (${a[0]})`:fz.hab; }
+function calc(p,fz,id){ const x=p.f[fz.k]; const s=st(id,fz.k); const ar=arteDe(x,s); const base=(ar&&s.arte)?(Number(x.at)||0)+(Number(ar[1])||0):x.mod; const mod=(s.mod!==undefined&&s.mod!=='')?Number(s.mod):base;
   let suma=0; x.mods.forEach((m,i)=>{ const on=(s.off&&(i in s.off))?s.off[i]:m.on; if(on) suma+=m.v; });
   const nl=nLocal(p,id,fz.k); const rm=cmpMods(p,id,fz.k).concat(nl.m.filter(m=>m.v>0)); rm.forEach(m=>{ suma+=m.v; }); const ef=evEf(p,id,fz.k); suma+=ef.m;
   const nNeg=nl.m.filter(m=>m.v<0); nNeg.forEach(m=>rm.push(m)); const neg=nNeg.reduce((a,m)=>a+m.v,0); const dif=Math.max(fz.dif,nl.dif);
@@ -243,7 +245,7 @@ function plantilla(id){ const p=DATA.pj[id]; let t=`[b]${DATA.titulo} · ${p.n}[
     const ms=x.mods.filter((m,i)=>{ const s=st(id,fz.k); return (s.off&&(i in s.off))?s.off[i]:m.on; }).map(m=>`${sg(m.v)} ${m.t}`);
     c.rm.forEach(m=>ms.push(`${sg(m.v)} ${m.t}`)); if(c.evM) ms.push(`${sg(c.evM)} imprevisto`);
     if(x.extra) ms.push(`${sg(x.extra)} extra del máster`); if(c.otros) ms.push(`${sg(c.otros)} otros`);
-    t+=`[b]${fz.nombre}[/b] (${fz.juez}): ${fz.at} + ${fz.hab} = ${c.mod}, dado ${c.dado}${c.ext?`, modificadores ${sg(c.ext)}${c.tope?' (tope +7)':''}`:''} = [b]${c.total}[/b] contra ${c.dif}\n`;
+    t+=`[b]${fz.nombre}[/b] (${fz.juez}): ${fz.at} + ${habDe(p,fz,id)} = ${c.mod}, dado ${c.dado}${c.ext?`, modificadores ${sg(c.ext)}${c.tope?' (tope +7)':''}`:''} = [b]${c.total}[/b] contra ${c.dif}\n`;
     if(c.evG&&c.est!=null) t+=`[i]El imprevisto quita un grado de éxito.[/i]\n`;
     if(ms.length) t+=`[i]${ms.join(' · ')}[/i]\n`;
     const g=c.g; const res=g.pasa?(g.ge?`superada con ${g.ge} ${g.ge>1?'grados':'grado'} de éxito`:'superada'):(g.gf?`fallada con ${g.gf} ${g.gf>1?'grados':'grado'} de fracaso`:'fallada');
@@ -263,7 +265,8 @@ function faseHTML(p,fz,id){ const x=p.f[fz.k]; const s=st(id,fz.k);
   return `<div class="fase" data-fase="${fz.k}"><h3>${esc(fz.nombre)} · ${esc(fz.juez)}</h3>
     <div class="reto">${esc(fz.at)} + ${esc(fz.hab)} contra <b>${fz.dif}</b></div>
     <div class="campos">
-      <label>Atributo + Habilidad<input type="number" inputmode="numeric" data-in="${fz.k}|mod" value="${s.mod??''}" placeholder="${x.mod}"></label>
+      ${x.arts&&x.arts.length?`<label class="c3">Tu Arte/Artesanía (la que puedas justificar en el post)<select data-in="${fz.k}|arte">${x.arts.map(a=>`<option value="${esc(a[0])}" ${(s.arte||x.arts[0][0])===a[0]?'selected':''}>${esc(a[0])} · +${a[1]}</option>`).join('')}</select></label>`:''}
+      <label>Atributo + Habilidad<input type="number" inputmode="numeric" data-in="${fz.k}|mod" value="${s.mod??''}" placeholder="${(()=>{ const a=arteDe(x,s); return a&&s.arte?(Number(x.at)||0)+(Number(a[1])||0):x.mod; })()}"></label>
       <label>Dado del foro<input type="number" inputmode="numeric" min="1" max="10" data-in="${fz.k}|dado" value="${s.dado??''}" placeholder="1 a 10"></label>
       <label class="c3">Otros (Cuchara de Oro, apoyos…)<input type="number" inputmode="numeric" data-in="${fz.k}|otros" value="${s.otros??''}" placeholder="0"></label></div>
     <div class="mini" style="margin-top:6px">En tu ficha: ${esc(x.txt)}.${x.blanco?' <span class="aviso">Tu ficha tiene el atributo en blanco y cuenta 0: avísale a Hana.</span>':''}</div>
@@ -332,6 +335,7 @@ function pintar(){ if(!DATA) return; const ids=Object.keys(DATA.pj).sort((a,b)=>
 
 document.addEventListener('change',e=>{ const el=e.target;
   if(el.id==='yoSel'){ YO=el.value||null; guardar(); pintar(); return; }
+  if(el.dataset.in&&el.dataset.in.endsWith('|arte')){ const k=el.dataset.in.split('|')[0]; st(YO,k).arte=el.value; guardar(); pintar(); return; }
   if(el.dataset.in==='noche|op'){ st(YO,'noche').op=el.value; guardar(); pintar(); return; }
   if(el.dataset.mod){ const [k,i]=el.dataset.mod.split('|'); const s=st(YO,k); (s.off=s.off||{})[i]=el.checked; guardar(); pintar(); } });
 document.addEventListener('input',e=>{ const el=e.target; if(!el.dataset.in) return; const [k,f]=el.dataset.in.split('|'); st(YO,k)[f]=el.value; guardar(); pintarRes(YO); });
