@@ -222,7 +222,8 @@ function nTxt(q){ if(q.auto) return q.nivel?`${q.op.n} ${q.nivel}: sin tirada, g
 function arteDe(x,s){ if(!x.arts||!x.arts.length) return null; const a=x.arts.find(z=>z[0]===s.arte)||x.arts[0]; return a; } // Arte/Artesanía: la que elija y justifique
 function habDe(p,fz,id){ const x=p.f[fz.k]; const a=arteDe(x,st(id,fz.k)); return a?`Arte/Artesanía (${a[0]})`:fz.hab; }
 // ---- Rescate con Estilo (Rupert): Voluntad + Estilo contra 9, opcional, una vez por ronda
-function rescRes(p,id){ const r=p.resc; if(!r) return null; const s=st(id,'resc'); const mod=(s.mod!==undefined&&s.mod!=='')?Number(s.mod):r.mod; const otros=Number(s.otros)||0;
+function rescDe(p){ if(p.resc) return p.resc; return (DATA&&DATA.tipo!=='r2'&&(DATA.fases||[]).some(f=>f.k==='pres'))?{mod:'',txt:'Voluntad + Estilo: escribe la suma de tu ficha',conf:0}:null; } // si el tracker todavía no mandó el dato, igual se muestra
+function rescRes(p,id){ const r=rescDe(p); if(!r) return null; const s=st(id,'resc'); const mod=(s.mod!==undefined&&s.mod!=='')?Number(s.mod):(Number(r.mod)||0); const otros=Number(s.otros)||0;
   const ext=Math.min(7,(Number(r.conf)||0)+otros); const dado=(s.dado===undefined||s.dado==='')?null:Number(s.dado); const o={mod,otros,ext,dado,conf:Number(r.conf)||0};
   if(dado==null) return o; o.total=mod+dado+ext; o.g=grados(o.total,9); o.est=o.g.pasa?(o.g.ge>=1?2:1):0; return o; }
 function calc(p,fz,id){ const x=p.f[fz.k]; const s=st(id,fz.k); const ar=arteDe(x,s); const base=(ar&&s.arte)?(Number(x.at)||0)+(Number(ar[1])||0):x.mod; const mod=(s.mod!==undefined&&s.mod!=='')?Number(s.mod):base;
@@ -256,7 +257,7 @@ function plantilla(id){ const p=DATA.pj[id]; let t=`[b]${DATA.titulo} · ${p.n}[
     if(r2){ t+=`Resultado: ${res} · [b]${c.cli>0?'+':''}${c.cli} clientes[/b]\n`; sum+=c.cli; }
     else { t+=`Resultado: ${res} · ${c.est?ESTR_BB.repeat(c.est)+' ':''}[b]${c.est} ${c.est===1?'estrella':'estrellas'}[/b]\n`; sum+=c.est; }
     hay++; t+='\n'; });
-  const rq=p.resc?rescRes(p,id):null; if(rq&&rq.dado!=null){ const g=rq.g; t+=`[b]Rescate con Estilo[/b] (Rupert): Voluntad + Estilo = ${rq.mod}, dado ${rq.dado}${rq.ext?`, modificadores ${sg(rq.ext)}`:''} = [b]${rq.total}[/b] contra 9\n${rq.conf?'[i]+1 Confesionario[/i]\n':''}Resultado: ${g.pasa?(g.ge?`superada con ${g.ge} ${g.ge>1?'grados':'grado'} de éxito`:'superada')+' · plato salvado':'fallada'} · ${rq.est?ESTR_BB.repeat(rq.est)+' ':''}[b]${rq.est} ${rq.est===1?'estrella':'estrellas'}[/b]\n\n`; sum+=rq.est; hay++; }
+  const rq=rescDe(p)?rescRes(p,id):null; if(rq&&rq.dado!=null){ const g=rq.g; t+=`[b]Rescate con Estilo[/b] (Rupert): Voluntad + Estilo = ${rq.mod}, dado ${rq.dado}${rq.ext?`, modificadores ${sg(rq.ext)}`:''} = [b]${rq.total}[/b] contra 9\n${rq.conf?'[i]+1 Confesionario[/i]\n':''}Resultado: ${g.pasa?(g.ge?`superada con ${g.ge} ${g.ge>1?'grados':'grado'} de éxito`:'superada')+' · plato salvado':'fallada'} · ${rq.est?ESTR_BB.repeat(rq.est)+' ':''}[b]${rq.est} ${rq.est===1?'estrella':'estrellas'}[/b]\n\n`; sum+=rq.est; hay++; }
   if(hay>1) t+=r2?`[b]Clientes del turno: ${sum>0?'+':''}${sum}[/b]`:`[b]Estrellas del turno:[/b] ${sum?ESTR_BB.repeat(sum)+' ':''}[b]${sum}[/b]`;
   return t.trim(); }
 
@@ -334,11 +335,11 @@ function pintar(){ if(!DATA) return; const ids=Object.keys(DATA.pj).sort((a,b)=>
    (p.sinPar?'':`<div class="panel"><h2>Tus tiradas</h2><p class="sub">Tira los dados en el foro y escribe aquí el resultado. Los modificadores ya están sumados.</p>${fasesDe(p).map(fz=>faseHTML(p,fz,YO)).join('')}
      <div class="panel total-est" style="margin-top:20px"><span>${R2?'Clientes que sumas (provisorio)':'Estrellas de este turno (provisorio)'}</span><span id="estTot"></span></div>
      <p class="mini">Esto es una cuenta orientativa: el veredicto lo da Hana cuando lee tu post.</p></div>`)+
-   (p.resc?`<div class="panel"><div class="eyebrow">Opcional · Una vez por ronda · Rupert Bramble</div><h2>Rescate con Estilo</h2>
+   (rescDe(p)?`<div class="panel"><div class="eyebrow">Opcional · Una vez por ronda · Rupert Bramble</div><h2>Rescate con Estilo</h2>
      <p class="sub">Para salvar un plato que salió mal: solo puedes usarlo si alguna fase de esta ronda te dejó en 0 estrellas. Si superas el 9, ganas 1 estrella, y 2 si lo superas con un grado de éxito o más. Si lo fallas, no pierdes nada, pero ya gastaste el Rescate de la ronda. Es el último dado que tiras en tu post.</p>
-     <div class="reto">Voluntad + Estilo contra <b>9</b>${p.resc.conf?` <span class="chip pos">+${p.resc.conf} Confesionario</span>`:''}</div>
-     <div class="campos"><label>Atributo + Habilidad<input type="number" inputmode="numeric" data-in="resc|mod" value="${st(YO,'resc').mod??''}" placeholder="${p.resc.mod}"></label><label>Dado del foro<input type="number" inputmode="numeric" min="1" max="10" data-in="resc|dado" value="${st(YO,'resc').dado??''}" placeholder="vacío si no lo usas"></label><label class="c3">Otros<input type="number" inputmode="numeric" data-in="resc|otros" value="${st(YO,'resc').otros??''}" placeholder="0"></label></div>
-     <div class="mini" style="margin-top:6px">En tu ficha: ${esc(p.resc.txt)}.</div><div class="res" id="res-resc" aria-live="polite"></div></div>`:'')+
+     <div class="reto">Voluntad + Estilo contra <b>9</b>${rescDe(p).conf?` <span class="chip pos">+${rescDe(p).conf} Confesionario</span>`:''}</div>
+     <div class="campos"><label>Atributo + Habilidad<input type="number" inputmode="numeric" data-in="resc|mod" value="${st(YO,'resc').mod??''}" placeholder="${rescDe(p).mod}"></label><label>Dado del foro<input type="number" inputmode="numeric" min="1" max="10" data-in="resc|dado" value="${st(YO,'resc').dado??''}" placeholder="vacío si no lo usas"></label><label class="c3">Otros<input type="number" inputmode="numeric" data-in="resc|otros" value="${st(YO,'resc').otros??''}" placeholder="0"></label></div>
+     <div class="mini" style="margin-top:6px">En tu ficha: ${esc(rescDe(p).txt)}.</div><div class="res" id="res-resc" aria-live="polite"></div></div>`:'')+
    `<div class="panel"><h2>Para tu post</h2><p class="sub">Copia este texto debajo de tu narración.</p><textarea id="plant" rows="8" readonly></textarea>
      <div class="fila-btn"><button class="btn primary" id="cop">Copiar texto</button><span class="mini" id="copMsg"></span></div></div>
     <div class="panel"><details><summary>Reglas rápidas</summary><p class="sub">Tirada: d10 + Atributo + Habilidad + modificadores, contra la dificultad de la fase. Los modificadores externos suman como máximo +7. La escala de resultados es 5, 7, 9, 12, 15, 18, 21 y 25: cada escalón que superas es un grado de éxito, y cada escalón por debajo, un grado de fracaso. Estrellas por fase: 0 si fallas, 1 si superas y 1 más por cada grado de éxito, hasta 3.</p></details></div>`;
@@ -370,7 +371,7 @@ async function ciclo(primera){
     else if((o.at!==AT||primera)&&!(document.activeElement&&document.activeElement.dataset&&document.activeElement.dataset.in&&!primera)){ AT=o.at; const nuevo=!DATA||DATA.turno!==o.fogon.turno||DATA.ronda!==o.fogon.ronda; DATA=o.fogon;
       if(nuevo){ const g=leer(); const prev=(g.st||{})[DATA.ronda+'-'+DATA.turno]||{}; Object.keys(ST).forEach(k=>delete ST[k]); Object.assign(ST,prev); if(primera&&g.yo) YO=g.yo; }
       pintar(); }
-    $('#pie').textContent='Versión 17/11 · T5 con Rescate · '+(o&&o.at?'Datos de '+new Date(o.at).toLocaleString('es',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'');
+    $('#pie').textContent='Versión 17/11 · 11:15 · '+(o&&o.at?'Datos de '+new Date(o.at).toLocaleString('es',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'');
   }catch(e){ if(!DATA) espera('No pude conectar con la cocina','Revisa tu conexión: lo intento de nuevo en unos segundos.'); }
 }
 ciclo(true); setInterval(()=>ciclo(false),45000);
