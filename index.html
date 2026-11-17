@@ -751,8 +751,9 @@ function r2Juez(k){ return JUECES[k]?.c||k||'—'; }
 function r2Auto(id,t){ // Atributo + Habilidad de la tirada, sacado de la ficha (un atributo en blanco cuenta 0)
   const ai=CJ_AT[t.at]; let a=ai==null?null:fAt(id,ai); const blanco=a===''||a==null; if(blanco) a=0;
   let h=0; if(SKN.includes(t.hab)) h=skLv(id,t.hab);
+  else if(t.hab==='Arte/Artesanía'){ const L=fArts(id).slice().sort((x,y)=>y[1]-x[1]); h=L.length?Number(L[0][1])||0:0; return {v:Number(a)+h,a:Number(a),txt:`${t.at} ${blanco?'en blanco (0)':a} + ${L.length?'Arte/Artesanía ('+L[0][0]+') '+h:'Arte/Artesanía 0 (no tiene ninguna)'}`,blanco,arts:L}; } // la que se justifique: por defecto, la más alta
   else { const m=String(t.hab||'').match(/\((.+)\)/); const w=(m?m[1]:String(t.hab||'')).toLowerCase().slice(0,5); h=Math.max(0,...fArts(id).filter(x=>x[0].toLowerCase().includes(w)).map(x=>x[1])); }
-  return {v:Number(a)+h,txt:`${t.at} ${blanco?'en blanco (0)':a} + ${t.hab} ${h}`,blanco}; }
+  return {v:Number(a)+h,a:Number(a),txt:`${t.at} ${blanco?'en blanco (0)':a} + ${t.hab} ${h}`,blanco}; }
 function r2Rol(id){ const R=r2(); if(!R) return null; const i=R.pares.findIndex(p=>p.a===id||p.b===id); if(i<0) return null; const p=R.pares[i]; return {i,par:p,rol:p.a===id?'A':'B',comp:p.a===id?p.b:p.a}; }
 function r2Quien(p,t){ const q=p&&p.q&&p.q[t.k]; return q==='A'||q==='B'||q==='AB'?q:t.rol; } // quién tira: lo que eligió la pareja o, si no eligió, lo que dice la tirada
 function r2Tiradas(rol,p){ return (r2()?.tiradas||[]).filter(t=>{ const q=r2Quien(p,t); return q==='AB'||q===rol; }); }
@@ -925,8 +926,8 @@ function platosHay(){ return Object.keys(RONDAS).some(r=>S.platos?.[r]?.pub&&PJS
 // Viven en otro documento de la nube. Mientras estén ocultas, ese documento no lleva ningún dato: solo {vis:false}.
 const DOC_PAG='MC-MAGICCHEF-PAGINAS';
 const PG_URL={fogon:'https://jesleytherabbit-prog.github.io/magic-chef/fogon.html',clas:'https://jesleytherabbit-prog.github.io/magic-chef/clasificacion.html',truck:'https://jesleytherabbit-prog.github.io/magic-chef/foodtruck.html'};
-function pgDef(){ return {fogon:{vis:false,ronda:'R1',titulo:'La cocción',sub:'',fases:{base:true,toque:true,pres:false},rolls:{base:{at:'Voluntad',hab:'Arte (Cocina)'},toque:{at:'Destreza',hab:'Latrocinio'},pres:{at:'Voluntad',hab:'Estilo'}}},clas:{vis:false,rondas:{}},truck:{vis:false}}; }
-function pgNorm(x){ const d=pgDef(); x=x||{}; const f=x.fogon||{};
+function pgDef(){ return {fogon:{vis:false,ronda:'R1',titulo:'La cocción',sub:'',fases:{base:true,toque:true,pres:false},rolls:{base:{at:'Voluntad',hab:'Arte (Cocina)'},toque:{at:'Destreza',hab:'Latrocinio'},pres:{at:'Voluntad',hab:'Arte/Artesanía'}}},clas:{vis:false,rondas:{}},truck:{vis:false}}; }
+function pgNorm(x){ const d=pgDef(); x=x||{}; const f=x.fogon||{}; if(f.rolls&&f.rolls.pres&&f.rolls.pres.hab==='Estilo') f.rolls.pres={at:'Voluntad',hab:'Arte/Artesanía'}; // la Presentación pasó a Arte/Artesanía (17/11); Estilo es del Rescate
   return {fogon:Object.assign(d.fogon,f,{fases:Object.assign(d.fogon.fases,f.fases||{}),rolls:Object.assign(d.fogon.rolls,f.rolls||{})}),clas:Object.assign(d.clas,x.clas||{},{rondas:Object.assign({},(x.clas||{}).rondas||{})}),truck:Object.assign(d.truck,x.truck||{})}; }
 const PG_JUEZ={base:'vael',toque:'pommeroy',pres:'tuck'};
 function pgFases(){ return ['base','toque','pres'].filter(k=>S.pg.fogon.fases[k]); }
@@ -940,7 +941,7 @@ function pgFogon(){ const g=S.pg.fogon, rd=g.ronda, D=RONDAS[rd].d, r2m=(rd==='R
     if(ing){ x.ing={n:ing.n,nombre:ing.nombre,desc:ing.desc,img:ING_IMG[ing.n-1]?'https://i.imgur.com/'+ING_IMG[ing.n-1]+'.png':'',tirada:ing.tirada,dif:ing.dif,ok:ing.ok,ko:ing.ko,pend:!!kc.pend,pasa:kc.pend?null:!!kc.pasa,total:kc.pend?null:kc.total}; }
     fases.forEach(k=>{ const rl=g.rolls[k]||{}; const au=r2Auto(p.id,{at:rl.at||'Voluntad',hab:rl.hab||'Estilo'}); const R=S.rondas[rd]?.[p.id]?.[k]||{};
       const mods=modsFor(p.id,rd,k).filter(m=>(S.t2pub||!/Rupert/.test(m.txt||''))&&!m.rat&&!m.ev).map(m=>({v:m.v,t:pgTxt(m),on:!!m.on,c:m.cond?1:0}));
-      x.f[k]={mod:(R.mod!==''&&R.mod!=null)?Number(R.mod):au.v,auto:au.v,txt:au.txt,blanco:!!au.blanco,mods,extra:Number(R.extra)||0}; });
+      x.f[k]={mod:(R.mod!==''&&R.mod!=null)?Number(R.mod):au.v,auto:au.v,txt:au.txt,blanco:!!au.blanco,mods,extra:Number(R.extra)||0}; if(au.arts){ x.f[k].arts=au.arts; x.f[k].at=au.a; } });
     if(r2m){ const me=r2Rol(p.id); if(!me){ x.sinPar=true; } else { const tr=r2Truck(me.i); const L=r2Tiradas(me.rol,me.par); const U=(S.r2.unidad||'Destino').toLowerCase();
         x.fases=L.map(t=>({k:t.k,nombre:t.n,juez:r2Juez(t.juez),at:t.at,hab:t.hab,dif:Number(t.dif)||9}));
         const NE=r2NEf(p.id); x.fases.forEach(f=>{ if(NE.dif[f.k]) f.dif=Math.max(f.dif,NE.dif[f.k]); });
@@ -978,7 +979,7 @@ function paginasPublico(){ const out={v:1,at:Date.now(),fogon:{vis:false},clas:{
   if(S.pg.clas.vis) out.clas=pgClas();
   if(S.pg.truck.vis&&r2()&&S.r2pub) out.truck=pgTruck();
   return out; }
-function vPaginas(){ const g=S.pg.fogon, c=S.pg.clas, rd=g.ronda, D=RONDAS[rd].d; const habs=SKN.concat(['Arte (Cocina)']);
+function vPaginas(){ const g=S.pg.fogon, c=S.pg.clas, rd=g.ronda, D=RONDAS[rd].d; const habs=SKN.concat(['Arte (Cocina)','Arte/Artesanía']);
   const lock=(on,idb,tOn,tOff,dOn,dOff)=>`<div class="dp-lock ${on?'on':''}"><span><b>${on?tOn:tOff}</b> · ${on?dOn:dOff}</span><button class="btn ${on?'':'primary'}" id="${idb}">${on?'Volver a ocultar':'Publicar'}</button></div>`;
   const enlace=u=>`<div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 0"><a class="btn" href="${u}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">Abrir la página</a><button class="btn" data-pgcopy="${u}">Copiar enlace</button></div>`;
   const filas=['base','toque','pres'].map(k=>{ const r=g.rolls[k]||{}; return `<tr><td><label class="mini"><input type="checkbox" data-pgfase="${k}" ${g.fases[k]?'checked':''}> <b>${FASES[k]}</b> · ${esc(JUECES[PG_JUEZ[k]].c)}</label></td>
@@ -1211,7 +1212,7 @@ document.addEventListener('click',e=>{
 // (pestaña «Configurar») y viven en la sesión privada de la máster. Solo salen cuando ella publica.
 const FASE_N={base:'Base',toque:'Toque',pres:'Presentación',todas:'Todas las fases'};
 const FASE_J={base:'Ingrid Vael',toque:'Céleste Pommeroy',pres:'Barnaby Tuck'};
-const ROLLS0={base:{at:'Voluntad',hab:'Arte (Cocina)'},toque:{at:'Destreza',hab:'Latrocinio'},pres:{at:'Voluntad',hab:'Estilo'}};
+const ROLLS0={base:{at:'Voluntad',hab:'Arte (Cocina)'},toque:{at:'Destreza',hab:'Latrocinio'},pres:{at:'Voluntad',hab:'Arte/Artesanía'}};
 const PJCOL={logan:'#803E3A',volker:'#803E3A',irina:'#4ca07d',derek:'#769aaf',robert:'#803E3A',ileen:'#d1cb9e',owein:'#d1cb9e',robin:'#4ca07d',emma:'#803E3A',elizabeth:'#769aaf',travis:'#ae7952',miguel:'#316996',hiraki:'#005C1F',nick:'#769aaf',jennifer:'#316996',amanda:'#DAA515',winter:'#316996',elle:'#A3000D',maximilian:'#A3000D',woojin:'#ae7952'};
 const CMP_FASE={Cocina:'base',Latrocinio:'toque','Presentación':'pres'};
 function habAt(h){ const i=SKN.indexOf(h); return i<0?'Voluntad':ATL[SKA[i]]; }
@@ -1269,7 +1270,7 @@ function planAplicar(t){ const p=planDe(t); if(!p) return false; const g=S.pg.fo
   const R=rollsDe(p.ronda); ['base','toque','pres'].forEach(k=>{ g.fases[k]=(p.fases||[]).includes(k); g.rolls[k]=R[k]; }); return true; }
 
 // ----- Pestaña «Configurar»: rondas y plan de turnos
-function vConfig(){ const cfg=S.rcfg||{}; const habs=SKN.concat(['Arte (Cocina)']);
+function vConfig(){ const cfg=S.rcfg||{}; const habs=SKN.concat(['Arte (Cocina)','Arte/Artesanía']);
   const dsel=(k,f,v)=>`<select data-xr="${k}|d|${f}" aria-label="Dificultad de ${FASE_N[f]}">${ESCALA.map(n=>`<option ${Number(v)===n?'selected':''}>${n}</option>`).join('')}</select>`;
   const rondas=Object.entries(RONDAS).map(([k,v])=>{ const R=rollsDe(k); const c=cfg[k]||{};
     const filas=['base','toque','pres'].map(f=>`<tr><td><b>${FASE_N[f]}</b> <span class="mini">· ${FASE_J[f]}</span></td><td><span class="mini">${esc(R[f].at)} +</span> <select data-xr="${k}|roll|${f}" aria-label="Habilidad de ${FASE_N[f]}">${habs.map(h=>`<option ${R[f].hab===h?'selected':''}>${esc(h)}</option>`).join('')}</select></td><td class="num">${dsel(k,f,v.d[f])}</td></tr>`).join('');
