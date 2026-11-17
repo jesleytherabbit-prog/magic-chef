@@ -419,7 +419,7 @@ table.work.r2-t th[scope=row]{background:var(--card);color:inherit;font-family:i
     <div class="turnbox"><span>Turno</span><button id="tPrev" aria-label="Turno anterior">‹</button><b id="tNum" class="num">1</b><button id="tNext" aria-label="Turno siguiente">›</button><span id="tTot" class="num">de 20</span></div>
   </header>
   <nav class="tabs" id="tabs" role="tablist"></nav>
-  <div class="mtools" id="mTools"><span class="mini"><b id="cloudSt">Nube: se guarda sola mientras trabajas.</b><br>Los concursantes ven siempre lo último guardado. La copia es por si acaso.</span><span style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" id="foroImp">Traer del foro</button><button class="btn" id="cloudNow">Guardar ya</button><button class="btn" data-export="estado">Copia de seguridad</button><label class="btn" style="cursor:pointer">Cargar estado<input type="file" id="loadEst" accept=".json,application/json" hidden></label><button class="btn" id="lockBtn">Cerrar sesión de máster</button></span></div>
+  <div class="mtools" id="mTools"><span class="mini"><b id="cloudSt">Nube: se guarda sola mientras trabajas.</b><br>Los concursantes ven siempre lo último guardado. La copia es por si acaso. <b>Versión del tracker: 17/11 · T5 con Rescate e imprevistos</b></span><span style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" id="foroImp">Traer del foro</button><button class="btn" id="cloudNow">Guardar ya</button><button class="btn" data-export="estado">Copia de seguridad</button><label class="btn" style="cursor:pointer">Cargar estado<input type="file" id="loadEst" accept=".json,application/json" hidden></label><button class="btn" id="lockBtn">Cerrar sesión de máster</button></span></div>
 
   <main id="view"></main>
 </div>
@@ -591,7 +591,7 @@ async function importarForo(){
         const RR=((S.rondas[pl.ronda]=S.rondas[pl.ronda]||{})[id]=S.rondas[pl.ronda][id]||{});
         fs.forEach((f,i)=>{ const cur=(RR[f]=RR[f]||{}); if((cur.dado===''||cur.dado==null)&&dd[i]!=null){ cur.dado=dd[i]; nDp++; } });
         const ev=pl.ev?evAll().find(z=>z.pj===id&&Number(z.turno)===Number(t)):null; if(ev&&(ev.dado===''||ev.dado==null)&&dd[fs.length]!=null){ ev.dado=dd[fs.length]; nDp++; }
-        const esp=fs.length+(ev?1:0); if(esp&&dd.length!==esp&&!(Number(t)>=5&&dd.length===esp+1)) avP.push(`${BY[id].nombre.split(' ')[0]} tiró ${dd.length} d10 y se esperaban ${esp}`); });
+        const esp=fs.length+(ev?1:0); if(fs.includes('pres')&&dd.length===esp+1){ const rs=(RR.resc=RR.resc||{}); if(rs.dado===''||rs.dado==null){ rs.dado=dd[esp]; nDp++; } } if(esp&&dd.length!==esp&&!(Number(t)>=5&&dd.length===esp+1)) avP.push(`${BY[id].nombre.split(' ')[0]} tiró ${dd.length} d10 y se esperaban ${esp}`); });
       nD+=nDp; if(avP.length) setTimeout(()=>toast('Revisa los dados: '+avP.join('; ')),2500); } }
   { const R=rtD(); if(R&&Number(R.turno)===Number(t)){ let nR=0; Object.entries(o.t1||{}).forEach(([id,x])=>{ if(!BY[id]) return; const dd=(x.dados||[]); if(!dd.length) return; R.pj=R.pj||{}; const c=R.pj[id]=R.pj[id]||{};
         if((c.d20===''||c.d20==null)&&dd[0]!=null){ c.d20=dd[0]; if(!c.t) c.t=Date.now(); if((o.pids||{})[id]&&!c.pid) c.pid=o.pids[id]; nR++; }
@@ -727,6 +727,7 @@ function modsFor(id,ronda,fase){
   const resp=S.rondas[ronda]?.[id]?.respeta||{};
   return list.map(e=>({...e,on:e.cond?resp[e.cond]!==false:true}));
 }
+const RESC_ROLL={at:'Voluntad',hab:'Estilo'}; // Rescate con Estilo: Voluntad + Estilo contra 9, una vez por ronda; +1 estrella, +2 con un grado de éxito
 function rowCalc(id,ronda){
   if(ronda==='R2'&&r2()){ const st=r2Stars(id); return {fases:{},stars:st||0,tiene:st!=null,bonus:0,final:st||0}; } // la R2 se calcula en su módulo
   const R=S.rondas[ronda]?.[id]; const D=RONDAS[ronda].d; const out={fases:{},stars:0,tiene:false};
@@ -734,6 +735,9 @@ function rowCalc(id,ronda){
     const capWarn=ext>7; ext=Math.min(ext,7);
     if(!x||x.dado===''||x.dado==null){ out.fases[f]={pend:true,mods,ext}; return; }
     out.tiene=true; const mod0=(x.mod!==''&&x.mod!=null)?Number(x.mod):r2Auto(id,rollsDe(ronda)[f]).v; const total=mod0+Number(x.dado||0)+ext; let r=rollStars(total,D[f]); const pn=evPen(id,ronda,f); if(pn.g&&r.st>0) r={...r,st:Math.max(0,r.st-pn.g),evG:pn.g}; out.fases[f]={total,dif:D[f],...r,mods,ext,capWarn}; out.stars+=r.st; });
+  { const x=R?.resc; const conf=modsFor(id,ronda,'rescate').filter(m=>m.on).reduce((a,m)=>a+m.v,0); const eleg=['base','toque','pres'].some(f=>out.fases[f]&&!out.fases[f].pend&&out.fases[f].st===0);
+    if(x&&x.dado!==''&&x.dado!=null){ const mod0=(x.mod!==''&&x.mod!=null)?Number(x.mod):r2Auto(id,RESC_ROLL).v; const ext=Math.min(7,conf+(Number(x.extra)||0)); const total=mod0+Number(x.dado)+ext; const g=grados(total,9);
+      const st=(g.pasa&&eleg)?(g.ge>=1?2:1):0; out.resc={total,g,st,conf:conf>0,elegible:eleg}; out.stars+=st; out.tiene=true; } else out.resc={pend:true,conf:conf>0,elegible:eleg}; }
   const boc=R?.bocado?(ronda==='F'?2:1):0, vae=R?.vael?1:0, eq=R?.equipo?2:0; out.bonus=boc+vae+eq; out.stars+=out.bonus; out.final=ronda==='F'?out.stars*2:out.stars; return out;
 }
 function premioPos(id){ const n=acct().nPrem; const L=clasif().filter(r=>!S.renuncia[r.p.id]).slice(0,n).map(r=>r.p.id); return L.indexOf(id); }
@@ -942,6 +946,7 @@ function pgFogon(){ const g=S.pg.fogon, rd=g.ronda, D=RONDAS[rd].d, r2m=(rd==='R
     fases.forEach(k=>{ const rl=g.rolls[k]||{}; const au=r2Auto(p.id,{at:rl.at||'Voluntad',hab:rl.hab||'Estilo'}); const R=S.rondas[rd]?.[p.id]?.[k]||{};
       const mods=modsFor(p.id,rd,k).filter(m=>(S.t2pub||!/Rupert/.test(m.txt||''))&&!m.rat&&!m.ev).map(m=>({v:m.v,t:pgTxt(m),on:!!m.on,c:m.cond?1:0}));
       x.f[k]={mod:(R.mod!==''&&R.mod!=null)?Number(R.mod):au.v,auto:au.v,txt:au.txt,blanco:!!au.blanco,mods,extra:Number(R.extra)||0}; if(au.arts){ x.f[k].arts=au.arts; x.f[k].at=au.a; } });
+    if(!r2m&&fases.includes('pres')){ const au=r2Auto(p.id,RESC_ROLL); const conf=modsFor(p.id,rd,'rescate').filter(m=>m.on).reduce((a,m)=>a+m.v,0); x.resc={mod:au.v,txt:au.txt,conf}; }
     if(r2m){ const me=r2Rol(p.id); if(!me){ x.sinPar=true; } else { const tr=r2Truck(me.i); const L=r2Tiradas(me.rol,me.par); const U=(S.r2.unidad||'Destino').toLowerCase();
         x.fases=L.map(t=>({k:t.k,nombre:t.n,juez:r2Juez(t.juez),at:t.at,hab:t.hab,dif:Number(t.dif)||9}));
         const NE=r2NEf(p.id); x.fases.forEach(f=>{ if(NE.dif[f.k]) f.dif=Math.max(f.dif,NE.dif[f.k]); });
@@ -951,7 +956,7 @@ function pgFogon(){ const g=S.pg.fogon, rd=g.ronda, D=RONDAS[rd].d, r2m=(rd==='R
         const NC=r2NCfg(); if(NC){ const xn=S.r2.jug?.[p.id]||{}; x.noche={titulo:NC.titulo||'La noche anterior',intro:NC.intro||'',dif:Number(NC.dif)||9,sel:xn.op||'',reg:!!(xn.op&&(r2NOp(xn.op)?.auto||(xn.dado!==''&&xn.dado!=null))),
           op:NC.op.map(o=>{ const au=r2Auto(p.id,{at:o.at,hab:o.hab}); return {k:o.k,n:o.n,auto:!!o.auto,nivel:o.auto?((xn.op===o.k&&xn.niv!==''&&xn.niv!=null)?Number(xn.niv):r2NVen(p.id,o.ven)):0,tras:o.tras,at:o.at,hab:o.hab,desc:o.desc||'',vent:o.vent||'',cons:o.cons||'',mod:au.v,txt:au.txt,gen:o.auto?[]:r2NGen(p.id,o.tras).map(t=>t.a+' '+t.l),ventaja:o.ventaja||[],consecuencia:o.consecuencia||[]}; })}; }
         x.panel={eyebrow:'Tu pareja · Rol '+me.rol,titulo:BY[me.comp].nombre,sub:tr?(tr.nombre+(tr.comida?' · '+tr.comida:'')):'Todavía no les tocó '+U,menu:(tr&&tr.menu)||'',img:imgurURL(tr&&tr.img)||''}; } }
-    if(S.ev&&S.ev.list&&S.ev.pub[S.turno]){ const e=evAll().find(z=>z.pj===p.id&&Number(z.turno)===Number(S.turno)); if(e){ const c=evCalc(e); x.ev={titulo:e.titulo,escena:e.escena||'',fase:e.fase,faseN:FASE_N[e.fase],at:e.at,hab:e.hab,dif:Number(e.dif)||9,mod:c.mod,txt:c.au.txt,blanco:c.au.blanco,ef:(!e.ef||e.ef==='grado')?'grado':Number(e.ef),dado:c.pend?null:Number(e.dado)}; } }
+    if(S.ev&&S.ev.list&&(S.ev.pub[S.turno]||planDe(S.turno)?.ev)){ /* los imprevistos del turno salen solos en el Fogón */ const e=evAll().find(z=>z.pj===p.id&&Number(z.turno)===Number(S.turno)); if(e){ const c=evCalc(e); x.ev={titulo:e.titulo,escena:e.escena||'',fase:e.fase,faseN:FASE_N[e.fase],at:e.at,hab:e.hab,dif:Number(e.dif)||9,mod:c.mod,txt:c.au.txt,blanco:c.au.blanco,ef:(!e.ef||e.ef==='grado')?'grado':Number(e.ef),dado:c.pend?null:Number(e.dado)}; } }
     if(rtD()&&S.rt.pub&&S.rt.ronda===rd){ const c=rtCalc(p.id); const xr=(S.rt.pj&&S.rt.pj[p.id])||{}; if(c&&!c.sinComp){ const r=c.r; x.rt={lbl:RTL(),n:c.n,nombre:r.nombre,edicion:r.edicion,desc:r.desc,guia:r.guia,mania:r.mania,bonif:Number(r.bonif)||0,dif:Number(r.dif)||9,truco:r.truco,trucoFase:CMP_FASE[r.truco],mod:c.mod,txt:c.au.txt,blanco:c.au.blanco,dado:c.pend?null:Number(xr.dado),sin:xr.sin||{}}; } else x.rt={sinComp:true}; }
     if(!r2m&&fases.includes('pres')){ const P=S.platos?.[rd]; x.plato={img:imgurURL(P?.img?.[p.id])||'',nom:P?.nom?.[p.id]||''}; }
     o.pj[p.id]=x; });
@@ -1513,16 +1518,19 @@ function vTurnos(){
 function vCocinaTurno(tt,viejo){ const t=tt??S.turno, pl=planDe(t); if(!pl||!pl.ronda||pl.ronda==='R2') return '';
   const rd=pl.ronda, D=RONDAS[rd], fs=pl.fases||['base','toque','pres']; const X=evX();
   const hayEv=X.list.some(e=>Number(e.turno)===t);
-  const head=fs.map(f=>`<th>${FASE_N[f]} · ${FASE_J[f]} <span class="mini">(vs ${D.d[f]})</span></th>`).join('');
+  const conResc=fs.includes('pres'); const head=fs.map(f=>`<th>${FASE_N[f]} · ${FASE_J[f]} <span class="mini">(vs ${D.d[f]})</span></th>`).join('')+(conResc?'<th>Rescate con Estilo · Rupert <span class="mini">(vs 9, opcional)</span></th>':'');
   let tot=0;
   const rows=PJS.map(p=>{ const R=S.rondas[rd]?.[p.id]||{}; const c=rowCalc(p.id,rd); let st=0;
     const celdas=fs.map(f=>{ const x=R[f]||{}; const fc=c.fases[f]; if(!fc.pend) st+=fc.st;
-      return `<td><div style="display:flex;gap:4px;align-items:center"><input type="number" data-r="${p.id}" data-f="${f}" data-k="mod" value="${x.mod??''}" placeholder="${r2Auto(p.id,rollsDe(rd)[f]).v}" aria-label="Mod ${FASES[f]}" title="Atributo + Habilidad (vacío = el de la ficha)"><input type="number" data-r="${p.id}" data-f="${f}" data-k="dado" value="${x.dado??''}" aria-label="Dado ${FASES[f]}" title="Dado"><input type="number" data-r="${p.id}" data-f="${f}" data-k="extra" value="${x.extra??''}" aria-label="Extra ${FASES[f]}" title="Extra"></div>
+      return `<td><div style="display:flex;gap:4px;align-items:center"><input type="number" data-rd="${rd}" data-r="${p.id}" data-f="${f}" data-k="mod" value="${x.mod??''}" placeholder="${r2Auto(p.id,rollsDe(rd)[f]).v}" aria-label="Mod ${FASES[f]}" title="Atributo + Habilidad (vacío = el de la ficha)"><input type="number" data-rd="${rd}" data-r="${p.id}" data-f="${f}" data-k="dado" value="${x.dado??''}" aria-label="Dado ${FASES[f]}" title="Dado"><input type="number" data-rd="${rd}" data-r="${p.id}" data-f="${f}" data-k="extra" value="${x.extra??''}" aria-label="Extra ${FASES[f]}" title="Extra"></div>
         <div class="mini">${fc.pend?'falta el dado':`${fc.total} vs ${fc.dif} · <span class="stars">${'★'.repeat(fc.st)}${'☆'.repeat(3-fc.st)}</span>`}${fc.capWarn?' <span class="warn">tope +7</span>':''}${fc.evG?` <span class="warn">imprevisto −${fc.evG} grado</span>`:''}</div>${fc.mods.map(m=>`<span class="chip ${m.v>0?'pos':'neg'}">${m.v>0?'+':''}${m.v} ${esc(m.txt)}</span>`).join('')}</td>`; }).join('');
+    let rc=''; if(conResc){ const x=R.resc||{}; const q=c.resc; if(q&&!q.pend) st+=q.st;
+      rc=`<td><div style="display:flex;gap:4px;align-items:center"><input type="number" data-rd="${rd}" data-r="${p.id}" data-f="resc" data-k="mod" value="${x.mod??''}" placeholder="${r2Auto(p.id,RESC_ROLL).v}" title="Voluntad + Estilo (vacío = el de la ficha)" aria-label="Mod Rescate"><input type="number" data-rd="${rd}" data-r="${p.id}" data-f="resc" data-k="dado" value="${x.dado??''}" title="Dado (vacío = no lo usa)" aria-label="Dado Rescate"><input type="number" data-rd="${rd}" data-r="${p.id}" data-f="resc" data-k="extra" value="${x.extra??''}" title="Extra" aria-label="Extra Rescate"></div>
+        <div class="mini">${!q||q.pend?'no lo usa':`${q.total} vs 9 · ${q.st?'+'+q.st+' ★ plato salvado':'no alcanza'}`}${q&&q.conf?' · <span class="chip pos">+1 Confesionario</span>':''}${q&&!q.pend&&!q.elegible?' <span class="warn">no cuenta: no tenía ninguna fase en 0</span>':''}</div></td>`; }
     tot+=st;
     const i=X.list.findIndex(e=>e.pj===p.id&&Number(e.turno)===t), e=i>=0?X.list[i]:null; let evc='<span class="mini">—</span>';
     if(e){ const k=evCalc(e); evc=`<div class="mini"><b>${esc(e.titulo)}</b> · ${esc(e.hab)} vs ${k.dif}</div><div style="display:flex;gap:6px;align-items:center"><input type="number" data-xe="${i}|dado" value="${e.dado??''}" min="1" max="10" style="width:56px" aria-label="Dado del imprevisto de ${esc(p.nombre)}">${k.pend?'<span class="mini">sin dado</span>':`<b>${k.total}</b> ${k.pasa?'<span class="res r-det">Superado</span>':'<span class="res r-falso">Fallado</span>'}`}</div>`; }
-    return `<tr><td><div class="who"><img alt="" src="${foto(p.id)}"><b>${esc(p.nombre)}</b></div></td>${celdas}<td>${evc}</td><td class="tot"><b>${st}</b></td></tr>`; }).join('');
+    return `<tr><td><div class="who"><img alt="" src="${foto(p.id)}"><b>${esc(p.nombre)}</b></div></td>${celdas}${rc}<td>${evc}</td><td class="tot"><b>${st}</b></td></tr>`; }).join('');
   return `<section class="view"><div class="panel"><div class="eyebrow">Turno ${t} · ${esc(D.n)}</div><h2>${esc(pl.titulo||'Cocina del turno')}</h2>
    <p class="sub">Una fila por concursante: Mod. (Atributo + Habilidad) · Dado · Extra de cada fase, el dado del imprevisto y las Estrellas que lleva en este turno. «Traer del foro» rellena los dados solos, y el imprevisto fallado ya descuenta un grado de éxito.</p>
    ${hayEv?'':`<p class="mini" style="color:var(--bad)">No hay imprevistos cargados para el turno ${t}: carga el archivo privado en Configurar (los dados de imprevisto se anotan después, por orden).</p>`}
@@ -2045,7 +2053,7 @@ document.addEventListener('change',e=>{
   if(d.t1){ if(S.t1[d.t1]) delete S.t1[d.t1].imp; const r=S.t1[d.t1]=S.t1[d.t1]||{obj:'tuck',met:'inf',acc:d.t1.includes('~')?'A':''}; r[d.k]=val; if(d.k==='acc'&&val==='C') r.obj='tuck'; if(d.k==='acc'||d.k==='met'||d.k==='obj'||d.k==='lazo') delete r.espK; if(d.k==='acc'||d.k==='met'||d.k==='lazo') delete r.genK; if(r.trHecho){ const g=t1Gen(d.t1); if(!g||g.k!==r.trHecho){ const u=fu(idOf(d.t1)); u.tr[r.trHecho]=Math.max(0,(u.tr[r.trHecho]||0)-1); if(g&&!r.lazo){ u.tr[g.k]=(u.tr[g.k]||0)+1; r.trHecho=g.k; } else delete r.trHecho; } } }
   else if(d.t1fama){ const id=d.t1fama, r=S.t1[id]=S.t1[id]||{}; const antes=t1FamaN(id), n=Number(val)||0; r.fama=n; const u=fu(id); u.c.fama=Math.max(0,(u.c.fama||0)+(n-antes));
     for(let i=2;i<=n+1;i++){ if(!S.t1[id+'~'+i]) S.t1[id+'~'+i]={acc:'A',obj:'tuck',met:r.met||'inf'}; } }
-  else if(d.r){ const R=((S.rondas[S.ronda]=S.rondas[S.ronda]||{})[d.r]=S.rondas[S.ronda][d.r]||{}); (R[d.f]=R[d.f]||{})[d.k]=val; }
+  else if(d.r){ const rr=d.rd||S.ronda; const R=((S.rondas[rr]=S.rondas[rr]||{})[d.r]=S.rondas[rr][d.r]||{}); (R[d.f]=R[d.f]||{})[d.k]=val; } // la tabla de cada turno escribe en SU ronda, no en la que esté abierta en Rondas
   else if(d.rb){ const R=((S.rondas[S.ronda]=S.rondas[S.ronda]||{})[d.rb]=S.rondas[S.ronda][d.rb]||{}); R[d.k]=val; }
   else if(d.resp){ const R=((S.rondas[S.ronda]=S.rondas[S.ronda]||{})[d.resp]=S.rondas[S.ronda][d.resp]||{}); (R.respeta=R.respeta||{})[d.j]=val; }
   else if(d.cj){ const c=S.caja[d.cj]=S.caja[d.cj]||{}; const pd=(id,n)=>{ const u=fu(id); u.c.pd=Math.max(0,(u.c.pd||0)+n); };
