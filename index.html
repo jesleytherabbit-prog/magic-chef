@@ -419,7 +419,7 @@ table.work.r2-t th[scope=row]{background:var(--card);color:inherit;font-family:i
     <div class="turnbox"><span>Turno</span><button id="tPrev" aria-label="Turno anterior">‹</button><b id="tNum" class="num">1</b><button id="tNext" aria-label="Turno siguiente">›</button><span id="tTot" class="num">de 20</span></div>
   </header>
   <nav class="tabs" id="tabs" role="tablist"></nav>
-  <div class="mtools" id="mTools"><span class="mini"><b id="cloudSt">Nube: se guarda sola mientras trabajas.</b><br>Los concursantes ven siempre lo último guardado. La copia es por si acaso. <b>Versión del tracker: 17/11 · 11:25</b></span><span style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" id="foroImp">Traer del foro</button><button class="btn" id="cloudNow">Guardar ya</button><button class="btn" data-export="estado">Copia de seguridad</button><label class="btn" style="cursor:pointer">Cargar estado<input type="file" id="loadEst" accept=".json,application/json" hidden></label><button class="btn" id="lockBtn">Cerrar sesión de máster</button></span></div>
+  <div class="mtools" id="mTools"><span class="mini"><b id="cloudSt">Nube: se guarda sola mientras trabajas.</b><br>Los concursantes ven siempre lo último guardado. La copia es por si acaso. <b>Versión del tracker: 18/11 · Ileen arreglada</b></span><span style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" id="foroImp">Traer del foro</button><button class="btn" id="cloudNow">Guardar ya</button><button class="btn" data-export="estado">Copia de seguridad</button><label class="btn" style="cursor:pointer">Cargar estado<input type="file" id="loadEst" accept=".json,application/json" hidden></label><button class="btn" id="lockBtn">Cerrar sesión de máster</button></span></div>
 
   <main id="view"></main>
 </div>
@@ -517,7 +517,31 @@ if(S.ejemplo){ const keep={yo:S.yo}; S=blank(); S.modo=UNLOCK?'master':'jugador'
 if(UNLOCK) Object.values(S.t2||{}).forEach(x=>{ delete x.oculto; }); } // «oculto» es solo de la copia pública
 normalizar();
 let lastStr='';
-function save(){ const str=JSON.stringify(Object.assign({},S,{_ts:0,modo:0,tab:0,tabJ:0,yo:0,fsel:0,calc:0}));
+
+// ----- Las tiradas ya hechas quedan con la ficha que el concursante tenía al tirarlas.
+// Si la ficha cambia, antes se anota en cada tirada vieja (con dado y sin Atributo + Habilidad escrito a mano) el valor de la ficha anterior.
+const VACIO=v=>v===''||v==null;
+function congelarPJ(id,hastaT4){ let n=0; // hastaT4: solo lo tirado antes del Turno 5 (para la migración)
+  t1Keys(id).forEach(k=>{ const r=S.t1[k]; if(r&&r.acc&&!VACIO(r.dado)&&VACIO(r.mod)){ const a=t1Auto(k); if(a){ r.mod=a.v; n++; } } });
+  { const r=(S.t2||{})[id]; if(r){ const c=t2Calc(id); if(!VACIO(r.ed)&&VACIO(r.eMod)){ r.eMod=c.eAuto; n++; } if(!VACIO(r.fd)&&VACIO(r.fMod)){ r.fMod=c.fAuto; n++; } } }
+  { const c=S.caja[id]; if(c&&c.d50&&!VACIO(c.dado)&&VACIO(c.mod)){ const ing=ING[cajaMapa().asig[id]||c.d50]; const u=ing?cajaAuto(id,ing):null; if(u){ c.mod=u.v; n++; } } }
+  Object.keys(RONDAS).forEach(rd=>{ const R=S.rondas?.[rd]?.[id]; if(!R) return; const RL=rollsDe(rd);
+    ['base','toque','pres'].forEach(f=>{ if(hastaT4&&f==='pres') return; const x=R[f]; if(x&&!VACIO(x.dado)&&VACIO(x.mod)){ x.mod=r2Auto(id,RL[f]).v; n++; } });
+    const x=R.resc; if(!hastaT4&&x&&!VACIO(x.dado)&&VACIO(x.mod)){ x.mod=r2Auto(id,RESC_ROLL).v; n++; } });
+  (S.ev?.list||[]).forEach(e=>{ if(hastaT4&&Number(e.turno)>=5) return; if(e.pj===id&&!VACIO(e.dado)&&VACIO(e.mod)){ e.mod=r2Auto(id,{at:e.at,hab:e.hab}).v; n++; } });
+  if(r2()){ (S.r2.tiradas||[]).forEach(t=>{ const x=S.r2.tir?.[id]?.[t.k]; if(x&&!VACIO(x.dado)&&VACIO(x.mod)){ x.mod=r2Auto(id,t).v; n++; } });
+    const j=S.r2.jug?.[id]; const op=j&&j.op?r2NOp(j.op):null; if(j&&op&&!op.auto&&!VACIO(j.dado)&&VACIO(j.mod)){ j.mod=r2Auto(id,{at:op.at,hab:op.hab}).v; n++; } }
+  return n; }
+const FICHA_MIGRA=['ileen']; // fichas que ya se cambiaron antes de este arreglo: sus tiradas viejas se recalculan con la ficha original
+const FIX_TIRADAS={ileen:{R1:{base:{mod:3,dado:9},toque:{mod:3,dado:1},pres:{mod:5,dado:8},resc:{mod:5,dado:2}}}}; // lo que dicen sus posts de los Turnos 4 y 5 (18/11)
+function fixTiradas(){ S.fixT=S.fixT||{}; Object.entries(FIX_TIRADAS).forEach(([id,R])=>{ if(S.fixT[id]) return; Object.entries(R).forEach(([rd,F])=>{ const P=((S.rondas[rd]=S.rondas[rd]||{})[id]=S.rondas[rd][id]||{}); Object.entries(F).forEach(([f,v])=>{ P[f]=Object.assign(P[f]||{},v); }); }); S.fixT[id]=true; }); }
+function fichasVigilar(){ if(!S||!S.fu) return; S.fuSnap=S.fuSnap||{}; let tot=0; try{ fixTiradas(); }catch(e){}
+  PJS.forEach(p=>{ const id=p.id; const cur=JSON.stringify(S.fu[id]||{}); const ant=S.fuSnap[id];
+    if(ant===undefined){ if(FICHA_MIGRA.includes(id)&&!S.fuMigra?.[id]){ const keep=S.fu[id]; S.fu[id]={}; tot+=congelarPJ(id,true); S.fu[id]=keep; tot+=congelarPJ(id); (S.fuMigra=S.fuMigra||{})[id]=true; } else tot+=congelarPJ(id); S.fuSnap[id]=cur; return; }
+    if(ant!==cur){ const keep=S.fu[id]; S.fu[id]=JSON.parse(ant); tot+=congelarPJ(id); S.fu[id]=keep; S.fuSnap[id]=cur; } });
+  return tot; }
+
+function save(){ try{ fichasVigilar(); }catch(e){ console.warn('fichasVigilar',e); } const str=JSON.stringify(Object.assign({},S,{_ts:0,modo:0,tab:0,tabJ:0,yo:0,fsel:0,calc:0}));
   if(str!==lastStr){ if(lastStr) S._ts=Date.now(); lastStr=str; if(UNLOCK) cloudSchedule(); }
   if(UNLOCK&&CLOUD.ready) S._m=2; // sello: esta copia de la máster ya se comparó con la nube
   try{ localStorage.setItem(UNLOCK?KEY:KEY_PUB,JSON.stringify(S)); }catch(e){} }
