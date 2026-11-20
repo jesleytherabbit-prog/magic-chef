@@ -419,7 +419,7 @@ table.work.r2-t th[scope=row]{background:var(--card);color:inherit;font-family:i
     <div class="turnbox"><span>Turno</span><button id="tPrev" aria-label="Turno anterior">‹</button><b id="tNum" class="num">1</b><button id="tNext" aria-label="Turno siguiente">›</button><span id="tTot" class="num">de 20</span></div>
   </header>
   <nav class="tabs" id="tabs" role="tablist"></nav>
-  <div class="mtools" id="mTools"><span class="mini"><b id="cloudSt">Nube: se guarda sola mientras trabajas.</b><br>Los concursantes ven siempre lo último guardado. La copia es por si acaso. <b>Versión del tracker: 20/11 · Turno 6 · noche</b></span><span style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" id="foroImp">Traer del foro</button><button class="btn" id="cloudNow">Guardar ya</button><button class="btn" data-export="estado">Copia de seguridad</button><label class="btn" style="cursor:pointer">Cargar estado<input type="file" id="loadEst" accept=".json,application/json" hidden></label><button class="btn" id="lockBtn">Cerrar sesión de máster</button></span></div>
+  <div class="mtools" id="mTools"><span class="mini"><b id="cloudSt">Nube: se guarda sola mientras trabajas.</b><br>Los concursantes ven siempre lo último guardado. La copia es por si acaso. <b>Versión del tracker: 20/11 · carga de la Ronda 2</b></span><span style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" id="foroImp">Traer del foro</button><button class="btn" id="cloudNow">Guardar ya</button><button class="btn" data-export="estado">Copia de seguridad</button><label class="btn" style="cursor:pointer">Cargar estado<input type="file" id="loadEst" accept=".json,application/json" hidden></label><button class="btn" id="lockBtn">Cerrar sesión de máster</button></span></div>
 
   <main id="view"></main>
 </div>
@@ -855,6 +855,10 @@ function vR2Noche(){ const C=r2NCfg(); if(!C) return ''; const R=r2(); const J=O
 function r2Cargar(txt){ let o; try{ o=JSON.parse(txt); }catch(e){ toast('Ese texto no es un archivo de ronda válido'); return; }
   if(!o||!Array.isArray(o.trucks)||!Array.isArray(o.pares)||!Array.isArray(o.tiradas)){ toast('Faltan camiones, parejas o tiradas'); return; }
   const malos=o.pares.flatMap(p=>[p.a,p.b]).filter(id=>id&&!BY[id]); if(malos.length){ toast('No conozco a: '+malos.join(', ')); return; }
+  const V=S.r2; if(V&&Array.isArray(V.pares)){ // ya había una ronda cargada: se actualiza la configuración y se conservan dados, jugadas, sorteos y publicaciones
+    ['trucks','tiradas','noche','titulo','tab','unidad'].forEach(k=>{ if(o[k]!==undefined) V[k]=o[k]; });
+    o.pares.forEach(np=>{ const vp=V.pares.find(x=>x.a===np.a&&x.b===np.b); if(!vp) V.pares.push(np); });
+    V.tir=V.tir||{}; render(); toast(`Ronda actualizada: ${V.trucks.length} opciones${V.noche?' y la noche anterior':''}. No se tocó lo ya cargado.`); return; }
   o.tir=o.tir||{}; S.r2=o; render(); toast(`Ronda cargada: ${o.trucks.length} opciones y ${o.pares.length} parejas`); }
 
 function vR2(){ const R=r2();
@@ -1297,6 +1301,7 @@ function datosCargar(txt){ let o; try{ o=JSON.parse(txt); }catch(e){ toast('Ese 
   if(Array.isArray(o.eventos)){ const X=evX(); let nu=0,up=0; o.eventos.forEach(e=>{ if(!e||!BY[e.pj]) return; const ya=X.list.find(x=>x.pj===e.pj&&Number(x.turno)===Number(e.turno));
       if(ya){ const keep={dado:ya.dado,mod:ya.mod}; Object.assign(ya,e,keep); up++; } else { X.list.push(Object.assign({dado:'',mod:''},e)); nu++; } }); hecho.push(`${nu} eventos nuevos${up?` y ${up} actualizados`:''}`); }
   if(o.comp&&Array.isArray(o.comp.lista)){ S.rt=S.rt||{}; S.rt.data={lista:o.comp.lista,lbl:o.comp.lbl||'compañero',titulo:o.comp.titulo||'Compañeros',sub:o.comp.sub||''}; S.rt.ronda=S.rt.ronda||o.comp.ronda||'R3'; S.rt.turno=S.rt.turno||o.comp.turno||10; S.rt.pj=S.rt.pj||{}; hecho.push(`${o.comp.lista.length} compañeros`); }
+  if(Array.isArray(o.trucks)&&Array.isArray(o.pares)&&Array.isArray(o.tiradas)){ r2Cargar(txt); if(!hecho.length) return; hecho.push('la Ronda 2'); }
   if(!hecho.length){ toast('No encontré nada que cargar en ese archivo'); return; }
   save(); render(); toast('Cargado: '+hecho.join(', ')); }
 
@@ -1327,7 +1332,7 @@ function vConfig(){ const cfg=S.rcfg||{}; const habs=SKN.concat(['Arte (Cocina)'
   return `<section class="view"><div class="panel"><div class="eyebrow">Configurar</div><h2>Rondas, plan de turnos y datos</h2>
     <p class="sub">Todo lo que antes había que pedirme está acá: nombre y dificultades de cada ronda, qué fases tiene cada turno, y los archivos de datos. Lo que cargues queda en tu sesión privada y no sale hasta que publiques.</p>
     <p class="eyebrow" style="margin:12px 0 4px">Cargar un archivo de datos</p>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><input type="file" id="datFile" accept=".json,application/json" aria-label="Archivo de datos de las rondas"><span class="mini">Acepta rondas, plan de turnos y los datos de cada ronda. Si lo cargás otra vez, no pisa los dados que ya anotaste.</span></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><input type="file" id="datFile" accept=".json,application/json" aria-label="Archivo de datos de las rondas"><span class="mini">Acepta rondas, plan de turnos, los datos de cada ronda y el archivo de la Ronda 2 (ronda2-food-trucks.json). Si lo cargás otra vez, no pisa los dados que ya anotaste.</span></div>
     <textarea id="datTxt" rows="3" style="width:100%;margin-top:8px" placeholder="…o pegá el contenido del archivo acá"></textarea>
     <div style="margin-top:6px"><button class="btn primary" id="datLoad">Cargar lo pegado</button></div></div>
    <div class="panel" style="margin-top:18px"><div class="eyebrow">Plan de turnos</div><h2>Qué se tira en cada turno</h2>
@@ -1544,7 +1549,13 @@ function vTurnos(){
     return `<div class="acc ${on?'on':''}"><button class="acc-h" data-topen="${k}" aria-expanded="${on}"><span class="acc-c" aria-hidden="true"></span><b>${t}</b><span class="acc-n">${n}</span>${act?'<span class="acc-act">Turno actual</span>':''}<span class="acc-e">${c}</span></button>${on?`<div class="acc-b">${fn()}</div>`:''}</div>`; }).join('')}</section>`;
 }
 // ----- Turnos de cocina (4 en adelante): una tabla con las tiradas de fase, el imprevisto y las Estrellas del turno
-function vCocinaTurno(tt,viejo){ const t=tt??S.turno, pl=planDe(t); if(!pl||!pl.ronda||pl.ronda==='R2') return '';
+function vNocheTurno(t){ const n=r2NCfg()?vR2Noche():'';
+  const J=S.r2?.jug||{}; const hechas=Object.values(J).filter(j=>j&&j.op).length;
+  return `<section class="view"><div class="panel"><div class="eyebrow">Turno ${t} · Ronda 2 · Food Trucks</div><h2>Tabla del Turno ${t}</h2>
+   <p class="sub">En este turno no se cocina: cada concursante puede hacer una jugada. «Traer del foro» carga la jugada y su dado desde el post. Las ventajas y consecuencias se aplican solas a las tiradas de los próximos turnos. Debajo, las tablas de los Turnos 4 y 5.</p>
+   <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0"><button class="btn primary" id="foroImp2">Traer del foro</button><span class="mini" style="align-self:center">${hechas} jugadas cargadas</span></div>
+   ${n||'<p class="warn">Falta cargar ronda2-food-trucks.json en Configurar: ahí están las parejas, los trucks y las jugadas.</p>'}</div></section>`; }
+function vCocinaTurno(tt,viejo){ const t=tt??S.turno, pl=planDe(t); if(pl&&pl.ronda==='R2'&&Array.isArray(PLAN0[t]?.r2t)&&!PLAN0[t].r2t.length) return vNocheTurno(t); if(!pl||!pl.ronda||pl.ronda==='R2') return '';
   const rd=pl.ronda, D=RONDAS[rd], fs=pl.fases||['base','toque','pres']; const X=evX();
   const hayEv=X.list.some(e=>Number(e.turno)===t);
   const conResc=fs.includes('pres'); const head=fs.map(f=>`<th>${FASE_N[f]} · ${FASE_J[f]} <span class="mini">(vs ${D.d[f]})</span></th>`).join('')+(conResc?'<th>Rescate con Estilo · Rupert <span class="mini">(vs 9, opcional)</span></th>':'');
