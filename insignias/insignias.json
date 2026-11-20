@@ -1,0 +1,419 @@
+{
+ "base": "https://jesleytherabbit-prog.github.io/magic-chef/insignias/",
+ "concursantes": {
+  "robert": {
+   "n": "Robert Stevenson",
+   "c": "#803E3A"
+  },
+  "emma": {
+   "n": "Emma Hakim",
+   "c": "#803E3A"
+  },
+  "logan": {
+   "n": "Logan Pusset-Strauss",
+   "c": "#803E3A"
+  },
+  "volker": {
+   "n": "Volker Krämer",
+   "c": "#803E3A"
+  },
+  "elizabeth": {
+   "n": "Elizabeth Atkinson",
+   "c": "#769aaf"
+  },
+  "irina": {
+   "n": "Irina Mills",
+   "c": "#4ca07d"
+  },
+  "maximilian": {
+   "n": "Maximilian Jackson",
+   "c": "#A3000D"
+  },
+  "nick": {
+   "n": "Nick Walterson",
+   "c": "#769aaf"
+  },
+  "derek": {
+   "n": "Derek Black",
+   "c": "#769aaf"
+  },
+  "hiraki": {
+   "n": "Hiraki Mynos",
+   "c": "#005C1F"
+  },
+  "robin": {
+   "n": "Robin Blackstone",
+   "c": "#4ca07d"
+  },
+  "ileen": {
+   "n": "Ileen Eaglebone",
+   "c": "#d1cb9e"
+  },
+  "amanda": {
+   "n": "Amanda Goldgrasp",
+   "c": "#DAA515"
+  },
+  "woojin": {
+   "n": "Woojin Moon",
+   "c": "#769aaf"
+  },
+  "owein": {
+   "n": "Owein Higham",
+   "c": "#d1cb9e"
+  },
+  "travis": {
+   "n": "Travis",
+   "c": "#ae7952"
+  },
+  "elle": {
+   "n": "Elle Winthers",
+   "c": "#A3000D"
+  },
+  "miguel": {
+   "n": "Miguel Umberland",
+   "c": "#316996"
+  },
+  "winter": {
+   "n": "Winter A. Torrance",
+   "c": "#316996"
+  },
+  "jennifer": {
+   "n": "Jennifer Harrison",
+   "c": "#316996"
+  }
+ },
+ "jueces": {
+  "oro": "La Cuchara",
+  "rupert": "Rupert Bramble",
+  "tuck": "Barnaby Tuck",
+  "pommeroy": "Céleste Pommeroy",
+  "vael": "Ingrid Vael",
+  "pipsy": "Pipsy",
+  "festival": "El festival"
+ },
+ "insignias": [
+  {
+   "id": "cuchara-de-oro-r1",
+   "nombre": "Cuchara de Oro",
+   "juez": "oro",
+   "ronda": "Ronda 1",
+   "como": "Ganar la Caja Misteriosa.",
+   "cita": "Nueve estrellas cada uno. Por primera vez desde 2029, dos cucharas.",
+   "la_tienen": [
+    "robert",
+    "emma"
+   ],
+   "img": "cuchara-de-oro-r1.png"
+  },
+  {
+   "id": "quiero-repetir",
+   "nombre": "Quiero repetir",
+   "juez": "tuck",
+   "ronda": "Ronda 1",
+   "como": "Que el señor Tuck pida repetir tu plato.",
+   "cita": "Si quiere repetir, el plato ha triunfado. Si se queda callado, recen.",
+   "la_tienen": [
+    "robert",
+    "emma"
+   ],
+   "img": "quiero-repetir.png"
+  },
+  {
+   "id": "rescatado-por-rupert",
+   "nombre": "Rescatado por Rupert",
+   "juez": "rupert",
+   "ronda": "Ronda 1",
+   "como": "Salvar un plato con el Rescate con Estilo.",
+   "cita": "El micrófono está disponible para los platos que necesitan una segunda oportunidad.",
+   "la_tienen": [
+    "woojin",
+    "owein",
+    "maximilian",
+    "robin",
+    "amanda",
+    "nick"
+   ],
+   "img": "rescatado-por-rupert.png"
+  },
+  {
+   "id": "cocina-con-alguien-dentro",
+   "nombre": "Una cocina con alguien dentro",
+   "juez": "vael",
+   "ronda": "Ronda 1",
+   "como": "Tarta de pera con chocolate anímico.",
+   "cita": "Esto sabe a una cocina con alguien dentro. (Vael)",
+   "la_tienen": [
+    "robert"
+   ],
+   "img": "cocina-con-alguien-dentro.png"
+  },
+  {
+   "id": "ni-una-espina",
+   "nombre": "Ni una espina",
+   "juez": "pommeroy",
+   "ronda": "Ronda 1",
+   "como": "Suspiros dulces marinos.",
+   "cita": "Lo he comprobado con la lengua, y es un riesgo que no tomo con cualquiera. (Pommeroy)",
+   "la_tienen": [
+    "emma"
+   ],
+   "img": "ni-una-espina.png"
+  },
+  {
+   "id": "se-mastica-con-pajita",
+   "nombre": "Se mastica con pajita",
+   "juez": "tuck",
+   "ronda": "Ronda 1",
+   "como": "El batido proteico del alcalde.",
+   "cita": "Esto no se bebe: se mastica con pajita. (Tuck)",
+   "la_tienen": [
+    "logan"
+   ],
+   "img": "se-mastica-con-pajita.png"
+  },
+  {
+   "id": "risotto-a-secas",
+   "nombre": "Risotto saltarín, y a secas",
+   "juez": "rupert",
+   "ronda": "Ronda 1",
+   "como": "Un título de diecisiete palabras y siete hongos recuperados.",
+   "cita": "El Risotto saltarín, y a secas, ha corrido una maratón y ha llegado entero. (Rupert)",
+   "la_tienen": [
+    "elizabeth"
+   ],
+   "img": "risotto-a-secas.png"
+  },
+  {
+   "id": "horquilla-maestra",
+   "nombre": "Horquilla maestra",
+   "juez": "pommeroy",
+   "ronda": "Ronda 1",
+   "como": "Abrir una campana cerrada con una horquilla.",
+   "cita": "Con los cierres ajenos tenía más práctica, directora. (Pommeroy)",
+   "la_tienen": [
+    "irina"
+   ],
+   "img": "horquilla-maestra.png"
+  },
+  {
+   "id": "la-madera-no-la-como",
+   "nombre": "La madera no la como",
+   "juez": "tuck",
+   "ronda": "Ronda 1",
+   "como": "L'alitosi en plato tallado a mano.",
+   "cita": "La madera no la como. Lo demás, sí. (Tuck)",
+   "la_tienen": [
+    "volker"
+   ],
+   "img": "la-madera-no-la-como.png"
+  },
+  {
+   "id": "dragon-dormido",
+   "nombre": "Un dragón dormido",
+   "juez": "rupert",
+   "ronda": "Ronda 1",
+   "como": "El hotteok flotante y un dragón de miel para Edith.",
+   "cita": "Edith, de Aberdeen: tu dragón está aquí, y tiene a alguien muy alto que lo cuida. (Rupert)",
+   "la_tienen": [
+    "woojin"
+   ],
+   "img": "dragon-dormido.png"
+  },
+  {
+   "id": "romance-en-tres-actos",
+   "nombre": "Romance en tres actos",
+   "juez": "rupert",
+   "ronda": "Ronda 1",
+   "como": "Recitar un poema entero en directo.",
+   "cita": "La redacción del Corazón de Bruja acaba de quedarse sin palabras. (Rupert)",
+   "la_tienen": [
+    "owein"
+   ],
+   "img": "romance-en-tres-actos.png"
+  },
+  {
+   "id": "hizo-callar-al-coco",
+   "nombre": "Hizo callar al coco",
+   "juez": "tuck",
+   "ronda": "Ronda 1",
+   "como": "Tarta a la Torrance, porque tiene mucho carácter.",
+   "cita": "Ha conseguido callar al coco. Solo por eso, ya merece algo.",
+   "la_tienen": [
+    "winter"
+   ],
+   "img": "hizo-callar-al-coco.png"
+  },
+  {
+   "id": "el-corazon-no",
+   "nombre": "El corazón, no",
+   "juez": "pommeroy",
+   "ronda": "Ronda 1",
+   "como": "Amor francés, dibujado con tinta de ruibarbo.",
+   "cita": "La torre está torcida. El corazón, no. (Pommeroy)",
+   "la_tienen": [
+    "miguel"
+   ],
+   "img": "el-corazon-no.png"
+  },
+  {
+   "id": "cocina-de-colegio",
+   "nombre": "Cocina de colegio",
+   "juez": "tuck",
+   "ronda": "Ronda 1",
+   "como": "Azúcar moldeado con los dedos y chispas picantes.",
+   "cita": "Se ve desde la otra punta del comedor y se acaba antes de que suene la campana. (Tuck)",
+   "la_tienen": [
+    "travis"
+   ],
+   "img": "cocina-de-colegio.png"
+  },
+  {
+   "id": "marea-de-medianoche",
+   "nombre": "Marea de medianoche",
+   "juez": "rupert",
+   "ronda": "Ronda 1",
+   "como": "Rescatar un plato solo con su aspecto.",
+   "cita": "Hay días en que la cocina se gana con la mano y días en que se gana con la cara. (Tuck)",
+   "la_tienen": [
+    "maximilian"
+   ],
+   "img": "marea-de-medianoche.png"
+  },
+  {
+   "id": "la-tierra-recuerda",
+   "nombre": "La tierra recuerda",
+   "juez": "vael",
+   "ronda": "Ronda 1",
+   "como": "Mortaja plateada, con magia del jurado.",
+   "cita": "La tierra recuerda. También esto. (Vael)",
+   "la_tienen": [
+    "robin"
+   ],
+   "img": "la-tierra-recuerda.png"
+  },
+  {
+   "id": "club-de-admiradoras",
+   "nombre": "Club de Admiradoras",
+   "juez": "rupert",
+   "ronda": "Ronda 1",
+   "como": "Huevos de Corazón Sanador, con carta desde Cardiff.",
+   "cita": "La profesora Vael ha pedido que lo pruebe otro primero. (Rupert)",
+   "la_tienen": [
+    "derek"
+   ],
+   "img": "club-de-admiradoras.png"
+  },
+  {
+   "id": "emplatado-bailando",
+   "nombre": "Emplatado bailando",
+   "juez": "pipsy",
+   "ronda": "Ronda 1",
+   "como": "Suspiro de Rosa Dracónica, emplatado al compás.",
+   "cita": "Pipsy está orgullosa de las rosas. (Pipsy)",
+   "la_tienen": [
+    "jennifer"
+   ],
+   "img": "emplatado-bailando.png"
+  },
+  {
+   "id": "los-posos-lo-sabian",
+   "nombre": "Los posos lo sabían",
+   "juez": "rupert",
+   "ronda": "Ronda 1",
+   "como": "El lecho de Lunaria, servido con la marea en su punto.",
+   "cita": "El chico ha leído mis posos mejor que yo. (Rupert)",
+   "la_tienen": [
+    "hiraki"
+   ],
+   "img": "los-posos-lo-sabian.png"
+  },
+  {
+   "id": "nana-para-el-queso",
+   "nombre": "Nana para el queso",
+   "juez": "tuck",
+   "ronda": "Ronda 1",
+   "como": "Cantarle una nana al plato.",
+   "cita": "Yo me dormiría feliz después de esto. (Tuck)",
+   "la_tienen": [
+    "ileen"
+   ],
+   "img": "nana-para-el-queso.png"
+  },
+  {
+   "id": "traje-a-juego",
+   "nombre": "Traje a juego",
+   "juez": "rupert",
+   "ronda": "Ronda 1",
+   "como": "Vestir igual que el presentador.",
+   "cita": "No puedo ser imparcial, y no pienso intentarlo. (Rupert)",
+   "la_tienen": [
+    "amanda"
+   ],
+   "img": "traje-a-juego.png"
+  },
+  {
+   "id": "una-ayudita",
+   "nombre": "¿Una ayudita?",
+   "juez": "rupert",
+   "ronda": "Ronda 1",
+   "como": "Cuidar de un jengibre resfriado y pedir rescate en una frase.",
+   "cita": "Bramble, ¿una ayudita por aquí?",
+   "la_tienen": [
+    "nick"
+   ],
+   "img": "una-ayudita.png"
+  },
+  {
+   "id": "justo-a-tiempo",
+   "nombre": "Justo a tiempo",
+   "juez": "pipsy",
+   "ronda": "Ronda 1",
+   "como": "Cambiar de plato un segundo antes del naufragio.",
+   "cita": "Pipsy siempre tiene platos. Pipsy siempre tiene espátulas.",
+   "la_tienen": [
+    "elle"
+   ],
+   "img": "justo-a-tiempo.png"
+  },
+  {
+   "id": "cliente-cien",
+   "nombre": "Cliente número 100",
+   "juez": "festival",
+   "ronda": "Ronda 2",
+   "como": "Que tu truck atienda a su cliente número cien.",
+   "cita": "Gente que paga, gente que se queja y gente que repite. (Tuck)",
+   "la_tienen": [],
+   "img": "cliente-cien.png"
+  },
+  {
+   "id": "truck-lleno",
+   "nombre": "Truck lleno",
+   "juez": "festival",
+   "ronda": "Ronda 2",
+   "como": "Llegar a las 12 estrellas del festival.",
+   "cita": "Una cocina del tamaño de un armario, y la plaza entera haciendo cola.",
+   "la_tienen": [],
+   "img": "truck-lleno.png"
+  },
+  {
+   "id": "ventanilla-impecable",
+   "nombre": "Ventanilla impecable",
+   "juez": "festival",
+   "ronda": "Ronda 2",
+   "como": "Superar la limpieza con grados de éxito.",
+   "cita": "Una cocina pequeña no es excusa para una cocina sucia. (Vael)",
+   "la_tienen": [],
+   "img": "ventanilla-impecable.png"
+  },
+  {
+   "id": "pareja-de-oro",
+   "nombre": "Pareja de oro",
+   "juez": "festival",
+   "ronda": "Ronda 2",
+   "como": "Ganar el festival de invierno con tu pareja.",
+   "cita": "Dos cocineros, una ventanilla y ni un solo plato tirado.",
+   "la_tienen": [],
+   "img": "pareja-de-oro.png"
+  }
+ ]
+}

@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Magic Chef · Insignias</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Pinyon+Script&display=swap">
+<script>try{ const t=localStorage.getItem('mc-tema'); if(t==='light'||t==='dark') document.documentElement.dataset.theme=t; }catch(e){}</script>
+<style>
+:root{
+  --bg:#EADBC2; --card:#FBF7EF; --card2:#F3EAD8; --ink:#3E3127; --soft:#7A6857;
+  --line:rgba(62,49,39,.16); --terra:#A9573A; --terra-ink:#8A452D; --sage:#5E7752; --gold:#B8924A; --gold-soft:#E3C98E;
+  --walnut:#2E2118; --on-dark:#F3E6CF;
+  --display:'Cinzel',Georgia,serif; --body:'Cormorant Garamond',Georgia,serif; --script:'Pinyon Script',cursive;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#1E1712; --card:#2E241C; --card2:#382C22; --ink:#EFE3CF; --soft:#B9A68D; --line:rgba(239,227,207,.14);
+  --terra:#D98462; --terra-ink:#E9A182; --sage:#93AE84; --gold:#D4AF6A; --gold-soft:#8F7443; --walnut:#140E0A; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#1E1712; --card:#2E241C; --card2:#382C22; --ink:#EFE3CF; --soft:#B9A68D; --line:rgba(239,227,207,.14);
+  --terra:#D98462; --terra-ink:#E9A182; --sage:#93AE84; --gold:#D4AF6A; --gold-soft:#8F7443; --walnut:#140E0A; color-scheme:dark}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:18px;line-height:1.35;
+  background-image:repeating-linear-gradient(90deg,rgba(255,255,255,.05) 0 2px,transparent 2px 22px)}
+.wrap{max-width:980px;margin:0 auto;padding:16px max(16px,env(safe-area-inset-right,0px)) 70px max(16px,env(safe-area-inset-left,0px))}
+button,select,textarea{font:inherit;color:inherit}
+h1,h2,h3{font-family:var(--display);font-weight:700;letter-spacing:.05em;margin:0;text-wrap:balance}
+.eyebrow{font-family:var(--display);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--sage)}
+.mini{font-size:15px;color:var(--soft)}
+header.top{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px;justify-content:space-between;padding:14px 18px;background:var(--walnut);color:var(--on-dark);border-radius:10px}
+header.top h1{font-size:20px;color:#E3C98E}
+header.top .script{font-family:var(--script);font-size:28px;color:#E7A07F;line-height:1}
+header.top a{color:#E3C98E;font-family:var(--display);font-size:11px;letter-spacing:.14em;text-transform:uppercase}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-top:16px}
+.panel h2{font-size:16px;color:var(--terra-ink)}
+.intro p{margin:8px 0 0}
+.btn{border:1px solid var(--gold);background:var(--card);padding:8px 13px;border-radius:7px;cursor:pointer;font-family:var(--display);font-size:11px;letter-spacing:.12em;text-transform:uppercase}
+.btn:hover{border-color:var(--terra)}
+.btn.ok{border-color:var(--sage);color:var(--sage)}
+select{background:var(--card2);border:1px solid var(--line);border-radius:7px;padding:8px 10px;max-width:100%}
+.fila-sel{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:10px}
+.mias{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 6px;min-height:20px}
+.mias img{width:84px;height:84px}
+textarea{width:100%;min-height:74px;background:var(--card2);border:1px solid var(--line);border-radius:7px;padding:8px 10px;font-family:ui-monospace,Consolas,monospace;font-size:12px;resize:vertical}
+.filtros{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.chip{border:1px solid var(--line);background:var(--card2);border-radius:99px;padding:5px 12px;cursor:pointer;font-family:var(--display);font-size:11px;letter-spacing:.1em;text-transform:uppercase}
+.chip[aria-pressed="true"]{background:var(--walnut);color:#E3C98E;border-color:var(--walnut)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-top:16px}
+.ins{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 14px 12px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px}
+.ins img{width:120px;height:120px;transition:transform .25s}
+.ins:hover img{transform:rotate(-4deg) scale(1.04)}
+.ins h3{font-size:14px;color:var(--terra-ink)}
+.ins .r{font-family:var(--display);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--soft)}
+.ins .como{font-size:16px}
+.ins .cita{font-style:italic;font-size:15px;color:var(--soft)}
+.ins .quien{font-size:15px;margin-top:2px}
+.ins .quien b{font-weight:700}
+.ins .lock{font-family:var(--display);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold)}
+.ins.bloq{background:var(--card2)}
+.ins .btn{margin-top:auto}
+.oculta{display:none!important}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media (max-width:520px){.grid{grid-template-columns:1fr 1fr;gap:10px}.ins{padding:10px 8px}.ins img{width:92px;height:92px}.ins .cita{display:none}.mias img{width:64px;height:64px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top"><h1>Magic Chef</h1><span class="script">La vitrina de insignias</span><a href="clasificacion.html">Ver la clasificación</a></header>
+
+  <section class="panel intro">
+    <div class="eyebrow">Para presumir</div>
+    <h2>Las medallas de la quinta edición</h2>
+    <p>Cada insignia recuerda un momento del concurso: una frase del jurado, un rescate, un plato que nadie va a olvidar. Las que están en gris todavía no las ha ganado nadie.</p>
+    <p class="mini">Puedes ponerte en la firma las insignias que tenga tu personaje. Elige tu nombre y copia el código: las imágenes se cargan desde aquí, así que si ganas más, solo tienes que volver a copiarlo.</p>
+  </section>
+
+  <section class="panel" id="mio">
+    <h2>Tu vitrina</h2>
+    <div class="fila-sel">
+      <label for="sel" class="mini">Concursante</label>
+      <select id="sel"><option value="">Elige tu personaje…</option></select>
+      <label class="mini"><input type="checkbox" id="tam"> Tamaño pequeño (50 px)</label>
+    </div>
+    <div class="mias" id="mias"></div>
+    <div id="cod" hidden>
+      <textarea id="txt" readonly aria-label="Código para la firma"></textarea>
+      <div class="fila-sel"><button class="btn" id="copiar">Copiar el código</button><span class="mini" id="cuantas"></span></div>
+    </div>
+  </section>
+
+  <div class="filtros" id="filtros" role="group" aria-label="Filtrar insignias"></div>
+  <div class="grid" id="grid"><p class="mini">Abriendo la vitrina…</p></div>
+</div>
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const PAG='https://jesleytherabbit-prog.github.io/magic-chef/insignias.html';
+let D=null, FILTRO='todas';
+const nom=id=>{ const p=D.concursantes[id]; return p?`<b style="color:${p.c}">${esc(p.n)}</b>`:esc(id); };
+const src=b=>D.base+b.img;
+function codigo(lista,px){
+  return lista.map(b=>`<a href="${PAG}" title="Magic Chef 2034 · ${esc(b.nombre)}"><img src="${src(b)}" alt="${esc(b.nombre)}" width="${px}" height="${px}" style="width:${px}px;height:${px}px"></a>`).join('');
+}
+function copiar(texto,btn){
+  const ok=()=>{ const t=btn.textContent; btn.textContent='¡Copiado!'; btn.classList.add('ok'); setTimeout(()=>{btn.textContent=t;btn.classList.remove('ok')},1600); };
+  if(navigator.clipboard&&window.isSecureContext) navigator.clipboard.writeText(texto).then(ok,()=>fallback());
+  else fallback();
+  function fallback(){ const ta=document.createElement('textarea'); ta.value=texto; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy'); ok();}catch(e){} ta.remove(); }
+}
+function pintarGrid(){
+  const g=$('#grid');
+  g.innerHTML=D.insignias.map(b=>{
+    const bloq=!b.la_tienen.length;
+    const vis=FILTRO==='todas'||b.ronda===FILTRO||(FILTRO==='por-ganar'&&bloq);
+    return `<article class="ins${bloq?' bloq':''}${vis?'':' oculta'}">
+      <img src="${esc(b.local)}" alt="" loading="lazy">
+      <span class="r">${esc(b.ronda)} · ${esc(D.jueces[b.juez]||'')}</span>
+      <h3>${esc(b.nombre)}</h3>
+      <div class="como">${esc(b.como)}</div>
+      <div class="cita">"${esc(b.cita)}"</div>
+      ${bloq?'<div class="lock">Por ganar</div>':`<div class="quien">${b.la_tienen.map(nom).join(' · ')}</div>
+      <button class="btn" data-uno="${esc(b.id)}">Copiar código</button>`}
+    </article>`; }).join('');
+}
+function pintarMio(){
+  const id=$('#sel').value; const px=$('#tam').checked?50:70;
+  const mias=id?D.insignias.filter(b=>b.la_tienen.includes(id)):[];
+  $('#mias').innerHTML=id?(mias.length?mias.map(b=>`<img src="${esc(b.local)}" alt="${esc(b.nombre)}" title="${esc(b.nombre)}">`).join(''):'<p class="mini">Todavía no hay insignias para este personaje. El festival está a la vuelta de la esquina.</p>'):'';
+  $('#cod').hidden=!mias.length;
+  if(mias.length){ $('#txt').value=codigo(mias,px); $('#cuantas').textContent=mias.length===1?'1 insignia':mias.length+' insignias'; }
+  try{ localStorage.setItem('mc-ins-pj',id); }catch(e){}
+}
+async function iniciar(){
+  try{
+    const r=await fetch('insignias/insignias.json',{cache:'no-store'}); D=await r.json();
+    D.insignias.forEach(b=>{ b.local='insignias/'+b.img; });
+    const ids=Object.keys(D.concursantes).sort((a,b)=>D.concursantes[a].n.localeCompare(D.concursantes[b].n,'es'));
+    $('#sel').insertAdjacentHTML('beforeend',ids.map(i=>`<option value="${i}">${esc(D.concursantes[i].n)}</option>`).join(''));
+    const rondas=[...new Set(D.insignias.map(b=>b.ronda))];
+    $('#filtros').innerHTML=[['todas','Todas'],...rondas.map(r=>[r,r]),['por-ganar','Por ganar']].map(([k,t])=>`<button class="chip" data-f="${esc(k)}" aria-pressed="${k===FILTRO}">${esc(t)}</button>`).join('');
+    let guard=''; try{ guard=localStorage.getItem('mc-ins-pj')||''; }catch(e){}
+    if(guard&&D.concursantes[guard]) $('#sel').value=guard;
+    pintarGrid(); pintarMio();
+  }catch(e){ $('#grid').innerHTML='<p class="mini">No pude abrir la vitrina. Revisa tu conexión y recarga la página.</p>'; }
+}
+document.addEventListener('click',e=>{
+  const f=e.target.closest('[data-f]'); if(f){ FILTRO=f.dataset.f; document.querySelectorAll('[data-f]').forEach(c=>c.setAttribute('aria-pressed',c===f)); pintarGrid(); return; }
+  const u=e.target.closest('[data-uno]'); if(u){ const b=D.insignias.find(x=>x.id===u.dataset.uno); copiar(codigo([b],70),u); return; }
+  if(e.target.id==='copiar') copiar($('#txt').value,e.target);
+});
+$('#sel').addEventListener('change',pintarMio); $('#tam').addEventListener('change',pintarMio);
+iniciar();
+</script>
+</body>
+</html>
