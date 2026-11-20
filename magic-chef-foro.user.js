@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Magic Chef · del foro al tracker
-// @namespace    https://jesleytherabbit-prog.github.io/magic-chef/
+// @namespace    https://jesleytherabbit-prog.github.io/magic-chef/ 
 // @version      2.3
 // @description  Lee los posts y los dados del tema de Magic Chef y los envía al tracker. En la ficha de un concursante, envía la ficha.
 // @match        https://hp-avada-kedavra.foroactivo.com/t*
