@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Magic Chef · del foro al tracker
 // @namespace    https://jesleytherabbit-prog.github.io/magic-chef/
-// @version      2.2
+// @version      2.3
 // @description  Lee los posts y los dados del tema de Magic Chef y los envía al tracker. En la ficha de un concursante, envía la ficha.
 // @match        https://hp-avada-kedavra.foroactivo.com/t*
 // @grant        none
@@ -293,6 +293,8 @@
     const o = {}; const t = String(texto || '');
     for (const m of t.matchAll(/(Base|Toque|Presentaci[oó]n)\s*\([^)]*\)\s*:[^\n]*?dado\s*(\d+)/gi)) { const k = m[1][0].toLowerCase() === 'b' ? 'base' : m[1][0].toLowerCase() === 't' ? 'toque' : 'pres'; if (o[k] == null) o[k] = +m[2]; }
     const ev = t.match(/Imprevisto\s*«[^»]*»\s*:[^\n]*?dado\s*(\d+)/i); if (ev) o.ev = +ev[1];
+    const nj = t.match(/La noche anterior[^\n·]*·\s*(Seguidores|Influencia|Informantes|Biblioteca|Fama|Recursos|Orden de Merl[ií]n)[^\n]*?(?:dado\s*(\d+))?/i);
+    if (nj) { o.noche = nj[1]; if (nj[2]) o.nocheDado = +nj[2]; } // la jugada de la noche anterior (Turno 6)
     const rs = t.match(/Rescate con Estilo\s*\([^)]*\)\s*:[^\n]*?dado\s*(\d+)/i); if (rs) o.resc = +rs[1];
     // estrellas que dice ganar en su post: «Estrellas del turno: 6» o, si hay una sola fase, su «N estrella(s)»
     const et = t.match(/Estrellas del turno:?\s*(?:\[?[^\d\n]{0,80}?)?(\d+)\b/i); if (et) o.est = +et[1];
@@ -300,11 +302,12 @@
     return Object.keys(o).length ? o : null;
   }
   // Tiradas esperadas por turno de cocina: cuántas fases tiran y quién tiene imprevisto (se actualiza con cada turno nuevo)
-  const COCINA = { 4: { fases: 2, ev: ['robert', 'emma', 'nick', 'logan'] }, 5: { fases: 1, ev: ['irina', 'hiraki', 'derek', 'elizabeth'], resc: true } };
+  const COCINA = { 6: { fases: 0, ev: [], noche: true }, 4: { fases: 2, ev: ['robert', 'emma', 'nick', 'logan'] }, 5: { fases: 1, ev: ['irina', 'hiraki', 'derek', 'elizabeth'], resc: true } };
   function cocinaDesc(x, id, turno) {
     x = x || {}; const d = (x.d10 && x.d10.length) ? x.d10 : (x.dados || []); const fp = x.fogon || null;
     let html = d.length ? `d10 en orden: <b>${d.join(' · ')}</b> <small>(el tracker los reparte: fases y, al final, el imprevisto)</small>` : '—';
     let revisar = !d.length;
+    if (COCINA[turno] && COCINA[turno].noche) { const fp0 = x.fogon || {}; return { html: (fp0.noche ? `Jugada: <b>${fp0.noche}</b>` : '<i>sin jugada en el post</i>') + (d.length ? ` · dado <b>${d[0]}</b>` : '') + (d.length > 1 ? `<br><span style="color:#A9473A">⚠ Tiró ${d.length} d10: solo cuenta el primero</span>` : ''), revisar: d.length > 1 }; }
     const E = COCINA[turno]; if (E && id && d.length) {
       const esp = E.fases + (E.ev.includes(id) ? 1 : 0);
       if (d.length !== esp && !(E.resc && d.length === esp + 1)) { html += `<br><span style="color:#A9473A">⚠ Esperaba ${esp} d10 (${E.fases} de cocina${E.ev.includes(id) ? ' + el imprevisto' : ''}) y tiró ${d.length}</span>`; revisar = true; }
