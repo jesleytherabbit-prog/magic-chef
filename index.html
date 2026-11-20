@@ -419,7 +419,7 @@ table.work.r2-t th[scope=row]{background:var(--card);color:inherit;font-family:i
     <div class="turnbox"><span>Turno</span><button id="tPrev" aria-label="Turno anterior">‹</button><b id="tNum" class="num">1</b><button id="tNext" aria-label="Turno siguiente">›</button><span id="tTot" class="num">de 20</span></div>
   </header>
   <nav class="tabs" id="tabs" role="tablist"></nav>
-  <div class="mtools" id="mTools"><span class="mini"><b id="cloudSt">Nube: se guarda sola mientras trabajas.</b><br>Los concursantes ven siempre lo último guardado. La copia es por si acaso. <b>Versión del tracker: 18/11 · Ileen arreglada</b></span><span style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" id="foroImp">Traer del foro</button><button class="btn" id="cloudNow">Guardar ya</button><button class="btn" data-export="estado">Copia de seguridad</button><label class="btn" style="cursor:pointer">Cargar estado<input type="file" id="loadEst" accept=".json,application/json" hidden></label><button class="btn" id="lockBtn">Cerrar sesión de máster</button></span></div>
+  <div class="mtools" id="mTools"><span class="mini"><b id="cloudSt">Nube: se guarda sola mientras trabajas.</b><br>Los concursantes ven siempre lo último guardado. La copia es por si acaso. <b>Versión del tracker: 20/11 · Turno 6 · noche</b></span><span style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" id="foroImp">Traer del foro</button><button class="btn" id="cloudNow">Guardar ya</button><button class="btn" data-export="estado">Copia de seguridad</button><label class="btn" style="cursor:pointer">Cargar estado<input type="file" id="loadEst" accept=".json,application/json" hidden></label><button class="btn" id="lockBtn">Cerrar sesión de máster</button></span></div>
 
   <main id="view"></main>
 </div>
@@ -610,6 +610,9 @@ async function importarForo(){
         if(dados[i]!=null&&(r.dado===''||r.dado==null)){ r.dado=dados[i]; r.imp=true; nD++; } }); }); }
   if(t===2){ S.t2=S.t2||{}; Object.entries(o.t1||{}).forEach(([id,x])=>{ if(!BY[id]||esCaja(x)) return; const r=S.t2[id]=S.t2[id]||{}; const dd=x.dados||[];
       if((r.ed===''||r.ed==null)&&dd[0]!=null){ r.ed=dd[0]; nD++; } if((r.fd===''||r.fd==null)&&dd[1]!=null&&!t2CalcPasa(id)){ r.fd=dd[1]; nD++; } if(x.conf&&!r.conf){ r.conf=true; nA++; } }); }
+  if(Number(t)===6&&r2()){ const MAP={seguidores:'seg',influencia:'infl',informantes:'inf',biblioteca:'bib',fama:'fama',recursos:'rec'}; S.r2.jug=S.r2.jug||{};
+    Object.entries(o.t1||{}).forEach(([id,x])=>{ if(!BY[id]) return; const dd=x.dados||[]; const nm=String(x.fogon?.noche||'').toLowerCase(); const k=MAP[nm]||(/orden/.test(nm)?'orden':'');
+      if(!k&&!dd.length) return; const j=S.r2.jug[id]=S.r2.jug[id]||{}; if(k&&!j.op){ j.op=k; nA++; } if((j.dado===''||j.dado==null)&&dd[0]!=null&&!(r2NOp(j.op||k)||{}).auto){ j.dado=dd[0]; nD++; } }); } // la jugada de la noche anterior
   { const pl=planDe(t); if(pl&&pl.ronda&&pl.ronda!=='R2'){ const fs=pl.fases||[]; const avP=[]; let nDp=0;
       Object.entries(o.t1||{}).forEach(([id,x])=>{ if(!BY[id]) return; const dd=(x.dados||[]); if(!dd.length) return;
         const RR=((S.rondas[pl.ronda]=S.rondas[pl.ronda]||{})[id]=S.rondas[pl.ronda][id]||{});
@@ -972,7 +975,7 @@ function pgFogon(){ const g=S.pg.fogon, rd=g.ronda, D=RONDAS[rd].d, r2m=(rd==='R
       const mods=modsFor(p.id,rd,k).filter(m=>(S.t2pub||!/Rupert/.test(m.txt||''))&&!m.rat&&!m.ev).map(m=>({v:m.v,t:pgTxt(m),on:!!m.on,c:m.cond?1:0}));
       x.f[k]={mod:(R.mod!==''&&R.mod!=null)?Number(R.mod):au.v,auto:au.v,txt:au.txt,blanco:!!au.blanco,mods,extra:Number(R.extra)||0}; if(au.arts){ x.f[k].arts=au.arts; x.f[k].at=au.a; } });
     if(!r2m&&fases.includes('pres')){ const au=r2Auto(p.id,RESC_ROLL); const conf=modsFor(p.id,rd,'rescate').filter(m=>m.on).reduce((a,m)=>a+m.v,0); x.resc={mod:au.v,txt:au.txt,conf}; }
-    if(r2m){ const me=r2Rol(p.id); if(!me){ x.sinPar=true; } else { const tr=r2Truck(me.i); const L=r2Tiradas(me.rol,me.par); const U=(S.r2.unidad||'Destino').toLowerCase();
+    if(r2m){ const me=r2Rol(p.id); if(!me){ x.sinPar=true; } else { const tr=r2Truck(me.i); const L0=r2Tiradas(me.rol,me.par); const pt=PLAN0[S.turno]?.r2t; const L=Array.isArray(pt)?L0.filter(t=>pt.includes(t.k)):L0; /* en cada turno de la R2, solo las tiradas de ese turno */ const U=(S.r2.unidad||'Destino').toLowerCase();
         x.fases=L.map(t=>({k:t.k,nombre:t.n,juez:r2Juez(t.juez),at:t.at,hab:t.hab,dif:Number(t.dif)||9}));
         const NE=r2NEf(p.id); x.fases.forEach(f=>{ if(NE.dif[f.k]) f.dif=Math.max(f.dif,NE.dif[f.k]); });
         L.forEach(t=>{ const au=r2Auto(p.id,t); let pen=r2Pen(tr,t); if(pen&&NE.pen0.includes(t.juez)) pen=0; const R=(S.r2.tir&&S.r2.tir[p.id]&&S.r2.tir[p.id][t.k])||{};
@@ -981,7 +984,7 @@ function pgFogon(){ const g=S.pg.fogon, rd=g.ronda, D=RONDAS[rd].d, r2m=(rd==='R
         const NC=r2NCfg(); if(NC){ const xn=S.r2.jug?.[p.id]||{}; x.noche={titulo:NC.titulo||'La noche anterior',intro:NC.intro||'',dif:Number(NC.dif)||9,sel:xn.op||'',reg:!!(xn.op&&(r2NOp(xn.op)?.auto||(xn.dado!==''&&xn.dado!=null))),
           op:NC.op.map(o=>{ const au=r2Auto(p.id,{at:o.at,hab:o.hab}); return {k:o.k,n:o.n,auto:!!o.auto,nivel:o.auto?((xn.op===o.k&&xn.niv!==''&&xn.niv!=null)?Number(xn.niv):r2NVen(p.id,o.ven)):0,tras:o.tras,at:o.at,hab:o.hab,desc:o.desc||'',vent:o.vent||'',cons:o.cons||'',mod:au.v,txt:au.txt,gen:o.auto?[]:r2NGen(p.id,o.tras).map(t=>t.a+' '+t.l),ventaja:o.ventaja||[],consecuencia:o.consecuencia||[]}; })}; }
         x.panel={eyebrow:'Tu pareja · Rol '+me.rol,titulo:BY[me.comp].nombre,sub:tr?(tr.nombre+(tr.comida?' · '+tr.comida:'')):'Todavía no les tocó '+U,menu:(tr&&tr.menu)||'',img:imgurURL(tr&&tr.img)||''}; } }
-    if(S.ev&&S.ev.list&&(S.ev.pub[S.turno]||planDe(S.turno)?.ev)){ /* los imprevistos del turno salen solos en el Fogón */ const e=evAll().find(z=>z.pj===p.id&&Number(z.turno)===Number(S.turno)); if(e){ const c=evCalc(e); x.ev={titulo:e.titulo,escena:e.escena||'',fase:e.fase,faseN:FASE_N[e.fase],at:e.at,hab:e.hab,dif:Number(e.dif)||9,mod:c.mod,txt:c.au.txt,blanco:c.au.blanco,ef:(!e.ef||e.ef==='grado')?'grado':Number(e.ef),dado:c.pend?null:Number(e.dado)}; } }
+    if(S.ev&&S.ev.list&&(S.ev.pub[S.turno]||(PLAN0[S.turno]?PLAN0[S.turno].ev:planDe(S.turno)?.ev))){ /* los imprevistos del turno salen solos en el Fogón */ const e=evAll().find(z=>z.pj===p.id&&Number(z.turno)===Number(S.turno)); if(e){ const c=evCalc(e); x.ev={titulo:e.titulo,escena:e.escena||'',fase:e.fase,faseN:FASE_N[e.fase],at:e.at,hab:e.hab,dif:Number(e.dif)||9,mod:c.mod,txt:c.au.txt,blanco:c.au.blanco,ef:(!e.ef||e.ef==='grado')?'grado':Number(e.ef),dado:c.pend?null:Number(e.dado)}; } }
     if(!x.ev&&!r2m){ const e=EV_POST[S.turno]?.[p.id]; if(e){ const au=r2Auto(p.id,{at:e[1],hab:e[2]}); x.ev={titulo:e[0],escena:'',fase:'pres',faseN:FASE_N.pres,at:e[1],hab:e[2],dif:e[3],mod:au.v,txt:au.txt,blanco:au.blanco,ef:'grado',dado:null}; } } // respaldo con lo que ya anunció el post
     if(rtD()&&S.rt.pub&&S.rt.ronda===rd){ const c=rtCalc(p.id); const xr=(S.rt.pj&&S.rt.pj[p.id])||{}; if(c&&!c.sinComp){ const r=c.r; x.rt={lbl:RTL(),n:c.n,nombre:r.nombre,edicion:r.edicion,desc:r.desc,guia:r.guia,mania:r.mania,bonif:Number(r.bonif)||0,dif:Number(r.dif)||9,truco:r.truco,trucoFase:CMP_FASE[r.truco],mod:c.mod,txt:c.au.txt,blanco:c.au.blanco,dado:c.pend?null:Number(xr.dado),sin:xr.sin||{}}; } else x.rt={sinComp:true}; }
     if(!r2m&&fases.includes('pres')){ const P=S.platos?.[rd]; x.plato={img:imgurURL(P?.img?.[p.id])||'',nom:P?.nom?.[p.id]||''}; }
@@ -1245,11 +1248,11 @@ document.addEventListener('click',e=>{
 const FASE_N={base:'Base',toque:'Toque',pres:'Presentación',todas:'Todas las fases'};
 const FASE_J={base:'Ingrid Vael',toque:'Céleste Pommeroy',pres:'Barnaby Tuck'};
 const ROLLS0={base:{at:'Voluntad',hab:'Arte (Cocina)'},toque:{at:'Destreza',hab:'Latrocinio'},pres:{at:'Voluntad',hab:'Arte/Artesanía'}};
-const PJCOL={logan:'#803E3A',volker:'#803E3A',irina:'#4ca07d',derek:'#769aaf',robert:'#803E3A',ileen:'#d1cb9e',owein:'#d1cb9e',robin:'#4ca07d',emma:'#803E3A',elizabeth:'#769aaf',travis:'#ae7952',miguel:'#316996',hiraki:'#005C1F',nick:'#769aaf',jennifer:'#316996',amanda:'#DAA515',winter:'#316996',elle:'#A3000D',maximilian:'#A3000D',woojin:'#ae7952'};
+const PJCOL={logan:'#803E3A',volker:'#803E3A',irina:'#4ca07d',derek:'#769aaf',robert:'#803E3A',ileen:'#d1cb9e',owein:'#d1cb9e',robin:'#4ca07d',emma:'#803E3A',elizabeth:'#769aaf',travis:'#ae7952',miguel:'#316996',hiraki:'#005C1F',nick:'#769aaf',jennifer:'#316996',amanda:'#DAA515',winter:'#316996',elle:'#A3000D',maximilian:'#A3000D',woojin:'#769aaf'};
 const CMP_FASE={Cocina:'base',Latrocinio:'toque','Presentación':'pres'};
 function habAt(h){ const i=SKN.indexOf(h); return i<0?'Voluntad':ATL[SKA[i]]; }
 function rollsDe(rd){ const c=(S.rcfg&&S.rcfg[rd]&&S.rcfg[rd].rolls)||{}; return {base:c.base||ROLLS0.base,toque:c.toque||ROLLS0.toque,pres:c.pres||ROLLS0.pres}; }
-const PLAN0={4:{ronda:'R1',fases:['base','toque'],ev:true,titulo:'La cocción'},5:{ronda:'R1',fases:['pres'],ev:true,titulo:'El emplatado'}}; // lo que ya es público del Turno 4 (el post): sirve aunque no hayas cargado el archivo privado
+const PLAN0={4:{ronda:'R1',fases:['base','toque'],ev:true,titulo:'La cocción'},5:{ronda:'R1',fases:['pres'],ev:true,titulo:'El emplatado'},6:{ronda:'R2',fases:[],ev:false,r2t:[],titulo:'La noche anterior'}}; // lo que ya es público del Turno 4 (el post): sirve aunque no hayas cargado el archivo privado
 function planDe(t){ return (S.plan&&S.plan[t])||PLAN0[t]||null; }
 
 // ----- Eventos aleatorios: una tirada del PJ; si la falla pierde un grado de éxito (o un modificador) en la fase indicada
