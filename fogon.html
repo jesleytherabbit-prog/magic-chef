@@ -297,7 +297,7 @@ function pintarRes(id){ const p=DATA.pj[id]; let suma=0, hay=false; const r2=DAT
     el.className='res '+(g.pasa?'ok':'ko');
     el.innerHTML=`<span class="tot num">${c.total}</span><span class="mini">contra ${c.dif}</span><span class="ver">${txt}</span>${r2?`<span class="estr num" aria-label="${c.cli} clientes">${c.cli>0?'+':''}${c.cli} clientes</span>`:`<span class="estr" aria-label="${c.est} de 3 estrellas">${ESTR_IMG.repeat(c.est)}${ESTR_OFF.repeat(3-c.est)}</span>`}${c.evG&&g.pasa?'<span class="aviso" style="flex-basis:100%">El imprevisto te quita un grado de éxito en esta fase.</span>':''}${c.tope?'<span class="aviso" style="flex-basis:100%">Los modificadores externos llegan al tope de +7.</span>':''}`; });
   const rq=rescRes(p,id); const er=$('#res-resc'); if(er&&rq){ if(rq.dado==null){ er.className='res'; er.innerHTML='<span class="mini">Si lo usas, escribe el dado y te digo cómo te fue. Si no lo usas, déjalo vacío.</span>'; } else { hay=true; suma+=rq.est; er.className='res '+(rq.est?'ok':'ko'); er.innerHTML=`<span class="tot num">${rq.total}</span><span class="mini">contra 9</span><span class="ver">${rq.est?'¡Plato salvado! Rupert lo cuenta con tanto cariño que el jurado duda.':'No alcanza: el jurado no se deja convencer. Ya gastaste el Rescate de esta ronda.'}</span><span class="estr">${ESTR_IMG.repeat(rq.est)}${ESTR_OFF.repeat(2-rq.est)}</span>`; } }
-  $('#estTot').innerHTML=hay?`<b class="num">${r2?(suma>0?'+':'')+suma+' clientes':suma+'</b> '+ESTR_IMG+'<b>'}</b>`:'<span class="mini">—</span>';
+  if($('#estTot')) $('#estTot').innerHTML=hay?`<b class="num">${r2?(suma>0?'+':'')+suma+' clientes':suma+'</b> '+ESTR_IMG+'<b>'}</b>`:'<span class="mini">—</span>';
   $('#plant').value=plantilla(id); pintarCampana(); }
 
 function pintar(){ if(!DATA) return; const ids=Object.keys(DATA.pj).sort((a,b)=>DATA.pj[a].n.localeCompare(DATA.pj[b].n,'es'));
@@ -332,7 +332,7 @@ function pintar(){ if(!DATA) return; const ids=Object.keys(DATA.pj).sort((a,b)=>
         <label>Otros (Específico, Orden de Merlín, Patrón)<input type="number" inputmode="numeric" data-in="noche|otros" value="${nst.otros??''}" placeholder="0"></label><label>Niveles de Recursos que usas<input type="number" inputmode="numeric" min="0" max="3" data-in="noche|rec" value="${nst.rec??''}" placeholder="0"></label></div>
       <div class="mini" style="margin-top:6px">En tu ficha: ${esc(nop.txt)}. Supera el ${N.dif}: ventaja y consecuencia. Falla sin grados de fracaso: no pasa nada. Falla con un grado de fracaso o más: solo la consecuencia.</div><div class="res" id="res-noche" aria-live="polite"></div>`}`:''}</div>`:'';
   $('#app').innerHTML=sel+`<div class="panel"><div class="yo"><img alt="" src="${esc(foto(YO,p))}"><div><div class="tag">${esc(p.tag)}</div><h2>${esc(p.n)}</h2></div></div></div>`+ingP+pn+noche+rt+ev+
-   (p.sinPar?'':`<div class="panel"><h2>Tus tiradas</h2><p class="sub">Tira los dados en el foro y escribe aquí el resultado. Los modificadores ya están sumados.</p>${fasesDe(p).map(fz=>faseHTML(p,fz,YO)).join('')}
+   ((p.sinPar||!fasesDe(p).length)?'':`<div class="panel"><h2>Tus tiradas</h2><p class="sub">Tira los dados en el foro y escribe aquí el resultado. Los modificadores ya están sumados.</p>${fasesDe(p).map(fz=>faseHTML(p,fz,YO)).join('')}
      <div class="panel total-est" style="margin-top:20px"><span>${R2?'Clientes que sumas (provisorio)':'Estrellas de este turno (provisorio)'}</span><span id="estTot"></span></div>
      <p class="mini">Esto es una cuenta orientativa: el veredicto lo da Hana cuando lee tu post.</p></div>`)+
    (rescDe(p)?`<div class="panel"><div class="eyebrow">Opcional · Una vez por ronda · Rupert Bramble</div><h2>Rescate con Estilo</h2>
@@ -374,7 +374,7 @@ async function ciclo(primera){
     else if((o.at!==AT||primera)&&!(document.activeElement&&document.activeElement.dataset&&document.activeElement.dataset.in&&!primera)){ AT=o.at; const nuevo=!DATA||DATA.turno!==o.fogon.turno||DATA.ronda!==o.fogon.ronda; DATA=o.fogon; evRespaldo();
       if(nuevo){ const g=leer(); const prev=(g.st||{})[DATA.ronda+'-'+DATA.turno]||{}; Object.keys(ST).forEach(k=>delete ST[k]); Object.assign(ST,prev); if(primera&&g.yo) YO=g.yo; }
       pintar(); }
-    $('#pie').textContent='Versión 17/11 · 11:20 · '+(o&&o.at?'Datos de '+new Date(o.at).toLocaleString('es',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'');
+    $('#pie').textContent='Versión 20/11 · Turno 6 · '+(o&&o.at?'Datos de '+new Date(o.at).toLocaleString('es',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'');
   }catch(e){ if(!DATA) espera('No pude conectar con la cocina','Revisa tu conexión: lo intento de nuevo en unos segundos.'); }
 }
 ciclo(true); setInterval(()=>ciclo(false),45000);
