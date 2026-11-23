@@ -61,6 +61,17 @@ header.top .script{font-family:var(--script);font-size:26px;color:#E7A07F;line-h
 
 /* selector de parejas */
 .pairs{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.mapa{position:relative;margin-top:12px;border-radius:10px;overflow:hidden;border:2px solid #3a2616;box-shadow:0 6px 18px rgba(0,0,0,.25);background:#1d2340;aspect-ratio:1672/941}
+.mapa>img.fondo{display:block;width:100%;height:100%;object-fit:cover}
+.mt{position:absolute;transform:translate(-50%,-100%);width:11.5%;padding:0;border:0;background:none;cursor:pointer;display:block;z-index:1}
+.mt img{display:block;width:100%;height:auto;filter:drop-shadow(0 2px 2px rgba(0,0,0,.45));transition:transform .2s,filter .2s}
+.mt:hover img,.mt:focus-visible img{transform:translateY(-3%) scale(1.05)}
+.mt[aria-pressed="true"] img{filter:drop-shadow(0 0 4px #ffe27a) drop-shadow(0 0 10px rgba(255,214,110,.9));transform:translateY(-4%) scale(1.07)}
+.mt.libre{cursor:default}.mt.libre img{filter:grayscale(.85) brightness(.6) drop-shadow(0 2px 2px rgba(0,0,0,.45))}
+.mt .et{position:absolute;left:50%;top:100%;transform:translate(-50%,-30%);white-space:nowrap;font-family:var(--body,Georgia,serif);font-size:clamp(9px,1.15vw,13px);line-height:1.15;background:rgba(29,19,12,.82);color:#f3e6cf;border:1px solid rgba(227,201,142,.6);border-radius:6px;padding:2px 6px;z-index:3;pointer-events:none}
+.mt .et b{color:#e3c98e;font-weight:700}
+.mt.libre .et{opacity:.75}
+@media (max-width:600px){.mt .et{display:none}.mt[aria-pressed="true"] .et{display:block}}
 .pair{display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--card2);border-radius:99px;padding:4px 12px 4px 5px;cursor:pointer;min-height:40px;font-size:16px}
 .pair[aria-pressed=true]{border-color:var(--terra);background:var(--card);box-shadow:0 0 0 1px var(--terra) inset}
 .pair .av{display:flex}
@@ -369,6 +380,17 @@ let PAR=null;
 function construirEventos(){ EV=[]; PL=[]; if(!PAR) return; PAR.tir.forEach(t=>{ t.r.forEach(r=>{ const e={k:t.k,n:t.n,at:t.at,hab:t.hab,dif:t.dif,juez:t.juez,id:r.id,who:r.n,rol:r.rol,pend:!!r.pend};
   if(!r.pend){ e.total=r.total; e.pasa=!!r.pasa; e.ge=r.ge; e.gf=r.gf; e.cli=r.cli; e.cat=r.pasa?(r.ge>0?'g+':'+'):(r.gf>0?'g-':'-'); } EV.push(e); if(!r.pend){ e.pi=PL.length; PL.push(e); } }); }); }
 function tr(n){ return (DATA.trucks||[]).find(t=>t.n===n)||null; }
+/* el mapa del festival: cada truck en su lugar de la plaza (en píxeles del dibujo de 1672 × 941: centro y borde de abajo) */
+const MAPA={w:1672,h:941,img:'trucks/mapa-hogsmeade.jpg'};
+const LUGAR=[[257,385],[547,385],[835,385],[1125,385],[1415,385],[233,550],[518,550],[840,550],[1172,550],[1470,550],[257,730],[552,730],[845,730],[1135,730],[1430,730]];
+function mapaHTML(){ const T=(DATA.trucks||[]).slice().sort((a,b)=>a.n-b.n); if(!T.length) return '';
+  const pins=T.map(t=>{ const L=LUGAR[t.n-1]; if(!L) return ''; const i=DATA.pares.findIndex(p=>p.truck===t.n); const P=i>=0?DATA.pares[i]:null;
+    const st=`left:${(L[0]/MAPA.w*100).toFixed(2)}%;top:${(L[1]/MAPA.h*100).toFixed(2)}%;z-index:${2+Math.floor(L[1]/100)}`;
+    const img=`<img alt="" src="trucks/${String(t.n).padStart(2,'0')}.png" loading="lazy">`;
+    if(!P) return `<div class="mt libre" style="${st}" title="${esc(t.nombre)} · sin cocineros">${img}<span class="et">${esc(t.nombre)}</span></div>`;
+    const nom=[P.a,P.b].filter(Boolean).map(m=>m.n.split(' ')[0]).join(' y ');
+    return `<button class="mt" style="${st}" data-sel="${i}" aria-pressed="${i===SEL}" title="${esc(t.nombre)} · ${esc(nom)}" aria-label="${esc(t.nombre)}: ${esc(nom)}">${img}<span class="et"><b>${esc(nom)}</b>${DATA.res&&P.cli!=null?' · '+P.cli+' cl.':''}</span></button>`; }).join('');
+  return `<div class="panel"><div class="eyebrow">Hogsmeade · Festival de invierno</div><h2>El mapa del festival</h2><p class="sub">Toca un truck para ver su jornada.</p><div class="mapa"><img class="fondo" src="${MAPA.img}" alt="La plaza de Hogsmeade nevada, con los food trucks en sus lugares">${pins}</div></div>`; }
 function chips(){ return DATA.pares.map((p,i)=>`<button class="pair" data-sel="${i}" aria-pressed="${i===SEL}"><span class="av">${[p.a,p.b].filter(Boolean).map(m=>`<img alt="" src="${esc(foto(m.id,m))}">`).join('')}</span><span>${[p.a,p.b].filter(Boolean).map(m=>esc(m.n)).join(' y ')}</span>${DATA.res&&p.cli!=null?`<span class="tn">${p.cli} cl.</span>`:''}</button>`).join(''); }
 function listado(){ return EV.map(e=>{ const cls=e.pend?'pend':(e.pasa?'ok':'ko'); const ic=e.pend?'…':(e.pasa?'✔':'✖');
   return `<li><button class="ev ${cls}" ${e.pend?'disabled aria-disabled="true"':`data-pl="${e.pi}"`} style="width:100%"><span class="ic" aria-hidden="true">${ic}</span><span><b>${esc(e.n)}</b><div class="mini">${esc(e.who)} · ${esc(e.at)} + ${esc(e.hab)}${e.juez?' · '+esc(e.juez):''}</div>
@@ -377,7 +399,7 @@ function pintar(){ const p=PAR; const t=tr(p.truck); const U=(DATA.unidad||'Food
   truckN=t?t.n:0; construirEventos();
   const nom=[p.a,p.b].filter(Boolean).map(m=>m.n).join(' y ');
   const hayRes=DATA.res&&PL.length>0;
-  $('#app').innerHTML=`
+  $('#app').innerHTML=mapaHTML()+`
    <div class="panel"><div class="eyebrow">${esc(DATA.titulo||'Ronda 2')}</div>
     <h2>${t?esc(t.nombre):'Todavía sin '+esc(U.toLowerCase())}</h2>
     <p class="sub">${t?esc(t.comida||''):''}${t&&t.comida?' · ':''}Pareja: ${esc(nom)}${DATA.res&&p.gana?' · <b>🥄 Cuchara de Oro</b>':''}</p>
@@ -403,7 +425,7 @@ function pintar(){ const p=PAR; const t=tr(p.truck); const U=(DATA.unidad||'Food
 let ctx=null;
 
 document.addEventListener('click',ev=>{ const b=ev.target.closest('button'); if(!b) return;
-  if(b.dataset.sel!==undefined){ detener(); SEL=+b.dataset.sel; PAR=DATA.pares[SEL]; try{ sessionStorage.setItem('mc-truck-sel',SEL); }catch(e){} pintar(); return; }
+  if(b.dataset.sel!==undefined){ detener(); SEL=+b.dataset.sel; PAR=DATA.pares[SEL]; try{ sessionStorage.setItem('mc-truck-sel',SEL); }catch(e){} const deMapa=b.classList.contains('mt'); pintar(); if(deMapa){ const sw=$('#sw'); if(sw) sw.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'center'}); } return; }
   if(b.id==='bstart'){ $('#start').remove(); reproducir(); return; }
   if(b.id==='bskip'){ $('#start').remove(); irFinal(); return; }
   if(b.id==='bplay'){ $('#start')?.remove(); reproducir(); return; }
