@@ -1048,6 +1048,7 @@ function vPaginas(){ const g=S.pg.fogon, c=S.pg.clas, rd=g.ronda, D=RONDAS[rd].d
     ${lock(g.vis,'pgFog','Fogón publicado','Fogón oculto','Los concursantes ya pueden abrir la página.','Nadie puede ver nada todavía.')}
     ${g.vis&&!nPub?'<p class="mini" style="color:var(--bad)">Marca al menos una fase: sin fases la página sigue oculta.</p>':''}
     ${enlace(PG_URL.fogon)}
+    ${(()=>{ const tF=(rd==='R2'&&!Array.isArray(PLAN0[S.turno]?.r2t))?(Number(Object.keys(PLAN0).sort((x,y)=>x-y).find(k=>Array.isArray(PLAN0[k].r2t)&&PLAN0[k].r2t.length))||S.turno):S.turno; const L=evAll().filter(z=>Number(z.turno)===Number(tF)); const turnos=[...new Set(evAll().map(z=>z.turno))].sort((x,y)=>x-y).join(', '); return `<p class="mini" style="margin-top:8px"><b>Imprevistos que saldrán en el Fogón (Turno ${tF}):</b> ${L.length?esc(L.map(z=>r2Nom(z.pj)).join(', ')):'<span style="color:var(--bad)">ninguno</span>'} · imprevistos cargados en total: ${evAll().length}${evAll().length?` (turnos ${turnos})`:' · carga magic-chef-datos-rondas.json en Configurar'}</p>`; })()}
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:14px">
       <label style="display:block">Ronda<select data-pgf="ronda" style="width:100%">${Object.entries(RONDAS).map(([k,v])=>`<option value="${k}" ${k===rd?'selected':''}>${esc(v.n)}</option>`).join('')}</select></label>
       <label style="display:block">Título<input type="text" data-pgf="titulo" value="${esc(g.titulo)}" style="width:100%"></label></div>
