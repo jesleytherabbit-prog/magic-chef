@@ -193,8 +193,15 @@ function faltan(iso){ if(!iso) return ''; const ms=new Date(iso)-Date.now(); if(
 
 function st(id,k){ return (ST[id]=ST[id]||{})[k]=(ST[id][k]||{}); }
 function cap(t){ return t?t[0].toUpperCase()+t.slice(1):''; }
-function fasesDe(p){ return p.fases||DATA.fases; }
-function evRes(p,id){ const e=p.ev; if(!e) return null; const s=st(id,'ev'); const mod=(s.mod!==undefined&&s.mod!=='')?Number(s.mod):(Number(e.mod)||0);
+function fasesTodas(p){ return p.fases||DATA.fases; }
+function r2Uno(p){ return DATA.tipo==='r2'?fasesTodas(p).filter(f=>f.uno):[]; } // tiradas que hace uno solo de la pareja
+function r2SelK(p){ const U=r2Uno(p); if(U.length<2) return null; const s=st(YO,'r2sel'); return (s.k&&U.some(f=>f.k===s.k))?s.k:(U.find(f=>f.mia)||U[0]).k; }
+function fasesDe(p){ const F=fasesTodas(p); const k=r2SelK(p); return k?F.filter(f=>!f.uno||f.k===k):F; }
+function r2SelHTML(p){ const U=r2Uno(p); const k=r2SelK(p); if(!k) return '';
+  return `<div class="panel"><h2>¿Qué tirada haces tú?</h2><p class="sub">En esta parte hay una tirada para cada uno. Pónganse de acuerdo en pareja: tú haces una y tu compañero, la otra.</p>
+    <div style="display:grid;gap:8px;margin-top:10px">${U.map(f=>`<label style="display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:8px;padding:10px 12px;cursor:pointer;background:${k===f.k?'var(--card2)':'transparent'}"><input type="radio" name="r2sel" data-r2sel="${esc(f.k)}" ${k===f.k?'checked':''} style="margin-top:4px"><span><b>${esc(f.nombre)}</b><br><span class="mini">${esc(f.at)} + ${esc(f.hab)} contra ${f.dif} · juzga ${esc(f.juez)}</span></span></label>`).join('')}</div></div>`; }
+function evFix(p){ if(DATA&&DATA.tipo==='r2'&&p&&p.ev){ const f=fasesDe(p)[0]; if(f){ p.ev.fase=f.k; p.ev.faseN=f.nombre; } } } // en la R2, el imprevisto cae sobre la tirada que eligió
+function evRes(p,id){ evFix(p); const e=p.ev; if(!e) return null; const s=st(id,'ev'); const mod=(s.mod!==undefined&&s.mod!=='')?Number(s.mod):(Number(e.mod)||0);
   const dado=e.dado!=null?e.dado:((s.dado===undefined||s.dado==='')?null:Number(s.dado));
   if(dado==null) return {mod,dado:null,e};
   const total=mod+dado; const g=grados(total,e.dif); return {mod,dado,total,g,pasa:g.pasa,e}; }
@@ -335,7 +342,7 @@ function pintar(){ if(!DATA) return; const ids=Object.keys(DATA.pj).sort((a,b)=>
       <p style="margin:8px 0 0">Para sincronizarte: <b>Carisma + Coordinación</b> contra <b>${p.rt.dif}</b>. Si lo logras: <span class="chip pos">+${p.rt.bonif} Base</span> <span class="chip pos">+2 ${esc(p.rt.truco)}</span> y +1 a la Base por grado de éxito (máx. +2). Si fallas: <span class="chip neg">−2 Latrocinio y Cocina</span>.</p>
       <div class="campos" style="margin-top:8px"><label>Atributo + Habilidad<input type="number" inputmode="numeric" data-in="rt|mod" value="${st(YO,'rt').mod??''}" placeholder="${p.rt.mod}"></label><label>Dado de sincronía<input type="number" inputmode="numeric" min="1" max="10" data-in="rt|dado" value="${p.rt.dado!=null?p.rt.dado:(st(YO,'rt').dado??'')}" ${p.rt.dado!=null?'readonly':''} placeholder="1 a 10"></label></div>
       <div class="mini" style="margin-top:6px">En tu ficha: ${esc(p.rt.txt)}.${p.rt.blanco?' <span class="aviso">Tu ficha tiene el atributo en blanco y cuenta 0: avísale a Hana.</span>':''}</div><div class="res" id="res-rt" aria-live="polite"></div></div>`):'';
-  const ev=p.ev?`<div class="panel"><div class="eyebrow">Imprevisto · fase ${esc(p.ev.faseN)}</div><h2>${esc(p.ev.titulo)}</h2>${p.ev.escena?`<p style="margin:8px 0 0">${esc(p.ev.escena)}</p>`:''}
+  evFix(p); const ev=p.ev?`<div class="panel"><div class="eyebrow">Imprevisto · ${esc(p.ev.faseN)}</div><h2>${esc(p.ev.titulo)}</h2>${p.ev.escena?`<p style="margin:8px 0 0">${esc(p.ev.escena)}</p>`:''}
       <p style="margin:8px 0 0">Tu tirada: <b>${esc(p.ev.at)} + ${esc(p.ev.hab)}</b> contra <b>${p.ev.dif}</b>. Si la superas, no pasa nada. Si la fallas, ${p.ev.ef==='grado'?'pierdes un grado de éxito':'tienes '+sg(p.ev.ef)+' al total'} en ${p.ev.fase==='todas'?'todas las fases':'la fase '+esc(p.ev.faseN)}.</p>
       <div class="campos" style="margin-top:8px"><label>Atributo + Habilidad<input type="number" inputmode="numeric" data-in="ev|mod" value="${st(YO,'ev').mod??''}" placeholder="${p.ev.mod}"></label><label>Dado del imprevisto<input type="number" inputmode="numeric" min="1" max="10" data-in="ev|dado" value="${p.ev.dado!=null?p.ev.dado:(st(YO,'ev').dado??'')}" ${p.ev.dado!=null?'readonly':''} placeholder="1 a 10"></label></div>
       <div class="mini" style="margin-top:6px">En tu ficha: ${esc(p.ev.txt)}.${p.ev.blanco?' <span class="aviso">Tu ficha tiene el atributo en blanco y cuenta 0: avísale a Hana.</span>':''}</div><div class="res" id="res-ev" aria-live="polite"></div></div>`:'';
@@ -351,7 +358,7 @@ function pintar(){ if(!DATA) return; const ids=Object.keys(DATA.pj).sort((a,b)=>
         <label>Otros (Específico, Orden de Merlín, Patrón)<input type="number" inputmode="numeric" data-in="noche|otros" value="${nst.otros??''}" placeholder="0"></label><label>Niveles de Recursos que usas<input type="number" inputmode="numeric" min="0" max="3" data-in="noche|rec" value="${nst.rec??''}" placeholder="0"></label></div>
       <div class="mini" style="margin-top:6px">En tu ficha: ${esc(nop.txt)}. Supera el ${N.dif}: ventaja y consecuencia. Falla sin grados de fracaso: no pasa nada. Falla con un grado de fracaso o más: solo la consecuencia.</div><div class="res" id="res-noche" aria-live="polite"></div>`}`:''}<div id="inf-sel"></div></div>`:'';
   $('#app').innerHTML=sel+`<div class="panel"><div class="yo"><img alt="" src="${esc(foto(YO,p))}"><div><div class="tag">${esc(p.tag)}</div><h2>${esc(p.n)}</h2></div></div></div>`+ingP+pn+noche+rt+ev+
-   ((p.sinPar||!fasesDe(p).length)?'':`<div class="panel"><h2>Tus tiradas</h2><p class="sub">Tira los dados en el foro y escribe aquí el resultado. Los modificadores ya están sumados.</p>${fasesDe(p).map(fz=>faseHTML(p,fz,YO)).join('')}
+   (p.sinPar?'':r2SelHTML(p))+((p.sinPar||!fasesDe(p).length)?'':`<div class="panel"><h2>Tus tiradas</h2><p class="sub">Tira los dados en el foro y escribe aquí el resultado. Los modificadores ya están sumados.</p>${fasesDe(p).map(fz=>faseHTML(p,fz,YO)).join('')}
      <div class="panel total-est" style="margin-top:20px"><span>${R2?'Clientes que sumas (provisorio)':'Estrellas de este turno (provisorio)'}</span><span id="estTot"></span></div>
      <p class="mini">Esto es una cuenta orientativa: el veredicto lo da Hana cuando lee tu post.</p></div>`)+
    (rescDe(p)?`<div class="panel"><div class="eyebrow">Opcional · Una vez por ronda · Rupert Bramble</div><h2>Rescate con Estilo</h2>
@@ -368,6 +375,7 @@ document.addEventListener('change',e=>{ const el=e.target;
   if(el.id==='yoSel'){ YO=el.value||null; guardar(); pintar(); return; }
   if(el.dataset.in&&el.dataset.in.endsWith('|arte')){ const k=el.dataset.in.split('|')[0]; st(YO,k).arte=el.value; guardar(); pintar(); return; }
   if(el.dataset.in==='noche|op'){ st(YO,'noche').op=el.value; guardar(); pintar(); return; }
+  if(el.dataset.r2sel){ st(YO,'r2sel').k=el.dataset.r2sel; guardar(); pintar(); return; }
   if(el.dataset.inf!=null){ const p=DATA.pj[YO]; const s=st(YO,'inf'); const L=Array.isArray(s.j)?s.j.slice():(((p&&p.noche&&p.noche.jue)||[]).slice()); L[+el.dataset.inf]=el.value; if(L[0]&&L[0]===L[1]) L[1-(+el.dataset.inf)]=''; s.j=L; guardar(); pintar(); return; }
   if(el.dataset.mod){ const [k,i]=el.dataset.mod.split('|'); const s=st(YO,k); (s.off=s.off||{})[i]=el.checked; guardar(); pintar(); } });
 document.addEventListener('input',e=>{ const el=e.target; if(!el.dataset.in) return; const [k,f]=el.dataset.in.split('|'); st(YO,k)[f]=el.value; guardar(); pintarRes(YO); });
