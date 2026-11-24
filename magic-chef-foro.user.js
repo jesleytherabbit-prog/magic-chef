@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Magic Chef · del foro al tracker
 // @namespace    https://jesleytherabbit-prog.github.io/magic-chef/ 
-// @version      2.4
+// @version      2.5
 // @description  Lee los posts y los dados del tema de Magic Chef y los envía al tracker. En la ficha de un concursante, envía la ficha.
 // @match        https://hp-avada-kedavra.foroactivo.com/t*
 // @grant        none
@@ -304,7 +304,7 @@
     return Object.keys(o).length ? o : null;
   }
   // Tiradas esperadas por turno de cocina: cuántas fases tiran y quién tiene imprevisto (se actualiza con cada turno nuevo)
-  const COCINA = { 6: { fases: 0, ev: [], noche: true }, 4: { fases: 2, ev: ['robert', 'emma', 'nick', 'logan'] }, 5: { fases: 1, ev: ['irina', 'hiraki', 'derek', 'elizabeth'], resc: true } };
+  const COCINA = { 7: { fases: 1, ev: ['owein', 'ileen', 'jennifer', 'miguel'] }, 6: { fases: 0, ev: [], noche: true }, 4: { fases: 2, ev: ['robert', 'emma', 'nick', 'logan'] }, 5: { fases: 1, ev: ['irina', 'hiraki', 'derek', 'elizabeth'], resc: true } };
   function cocinaDesc(x, id, turno) {
     x = x || {}; const d = (x.d10 && x.d10.length) ? x.d10 : (x.dados || []); const fp = x.fogon || null;
     let html = d.length ? `d10 en orden: <b>${d.join(' · ')}</b> <small>(el tracker los reparte: fases y, al final, el imprevisto)</small>` : '—';
@@ -312,7 +312,7 @@
     if (COCINA[turno] && COCINA[turno].noche) { const fp0 = x.fogon || {}; return { html: (fp0.noche ? `Jugada: <b>${fp0.noche}</b>` : '<i>sin jugada en el post</i>') + (fp0.infJ ? ` · jueces: <b>${fp0.infJ.join(' y ')}</b>` : '') + (d.length ? ` · dado <b>${d[0]}</b>` : '') + (d.length > 1 ? `<br><span style="color:#A9473A">⚠ Tiró ${d.length} d10: solo cuenta el primero</span>` : ''), revisar: d.length > 1 }; }
     const E = COCINA[turno]; if (E && id && d.length) {
       const esp = E.fases + (E.ev.includes(id) ? 1 : 0);
-      if (d.length !== esp && !(E.resc && d.length === esp + 1)) { html += `<br><span style="color:#A9473A">⚠ Esperaba ${esp} d10 (${E.fases} de cocina${E.ev.includes(id) ? ' + el imprevisto' : ''}) y tiró ${d.length}</span>`; revisar = true; }
+      if (d.length !== esp && !(E.resc && d.length === esp + 1)) { html += `<br><span style="color:#A9473A">⚠ Esperaba ${esp} d10 (${E.fases} ${turno >= 7 ? 'del truck' : 'de cocina'}${E.ev.includes(id) ? ' + el imprevisto' : ''}) y tiró ${d.length}</span>`; revisar = true; }
       else if (E.ev.includes(id)) html += `<br><small>Imprevisto: dado ${d[E.fases]}</small>`;
       if (E.resc && d.length === esp + 1) html += `<br><small>Dado extra al final: Rescate con Estilo (${d[d.length - 1]}).</small>`;
     }

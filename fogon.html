@@ -221,7 +221,7 @@ function nTxt(q){ if(q.auto) return q.nivel?`${q.op.n} ${q.nivel}: sin tirada, g
 
 // Informantes: anula el penalizador del truck con uno o dos jueces; el concursante los elige y Hana los registra en el tracker
 const JNOM={tuck:'Tuck',pommeroy:'Pommeroy',vael:'Vael',rupert:'Rupert'};
-function infN(p,id){ const N=p.noche; if(!N||DATA.tipo!=='r2') return 0; const s=st(id,'noche'); const k=s.op!==undefined?s.op:N.sel; const op=N.op.find(o=>o.k===k); const e=op&&(op.ventaja||[]).find(v=>v.tipo==='pen0'); if(!e) return 0;
+function infN(p,id){ const N=p.noche; if(!N||DATA.tipo!=='r2') return 0; const s=st(id,'noche'); const k=(N.cerrada&&N.sel)?N.sel:(s.op!==undefined?s.op:N.sel); const op=N.op.find(o=>o.k===k); const e=op&&(op.ventaja||[]).find(v=>v.tipo==='pen0'); if(!e) return 0;
   let pasa, ge; if(N.reg&&N.res&&k===N.sel){ pasa=!!N.res.pasa; ge=Number(N.res.ge)||0; } else { const q=nRes(p,id); if(!q||q.dado==null) return 0; pasa=q.pasa; ge=q.ge||0; }
   return pasa?((ge>=2&&e.n2)?Number(e.n2):(Number(e.n)||1)):0; }
 function infSel(p,id){ const n=infN(p,id); if(!n) return []; const s=st(id,'inf'); const L=Array.isArray(s.j)?s.j:((p.noche&&p.noche.jue)||[]); return L.slice(0,n).filter(Boolean); }
@@ -256,9 +256,9 @@ function plantilla(id){ const p=DATA.pj[id]; let t=`[b]${DATA.titulo} · ${p.n}[
   if(p.ing) t+=`Ingrediente: ${p.ing.nombre} (nº ${p.ing.n})\n`;
   const q=cmpRes(p,id); if(q&&q.dado!=null) t+=`${cap(q.r.lbl)}: ${q.r.nombre} (nº ${q.r.n}): Carisma + Coordinación = ${q.mod}, dado ${q.dado} = [b]${q.total}[/b] contra ${q.r.dif}: ${q.sync?'sincronizados':'desincronizados'}\n`;
   const v=evRes(p,id); if(v&&v.dado!=null) t+=`Imprevisto «${v.e.titulo}»: ${v.e.at} + ${v.e.hab} = ${v.mod}, dado ${v.dado} = [b]${v.total}[/b] contra ${v.e.dif}: ${v.pasa?'superado':'fallado'}\n`;
-  const nq=p.noche?nRes(p,id):null; if(nq&&nq.auto&&nq.nivel) t+=`[b]${p.noche.titulo}[/b] · ${nq.op.n} ${nq.nivel} (sin tirada)\nVentaja: ${nq.op.vent}\nConsecuencia: ${nq.op.cons}\n`;
+  const nq=(p.noche&&!p.noche.cerrada)?nRes(p,id):null; if(nq&&nq.auto&&nq.nivel) t+=`[b]${p.noche.titulo}[/b] · ${nq.op.n} ${nq.nivel} (sin tirada)\nVentaja: ${nq.op.vent}\nConsecuencia: ${nq.op.cons}\n`;
   else if(nq&&nq.dado!=null&&!nq.auto) t+=`[b]${p.noche.titulo}[/b] · ${nq.op.n}: ${nq.op.at} + ${nq.op.hab} = ${nq.mod}, dado ${nq.dado}${nq.ot?`, otros ${sg(nq.ot)}`:''} = [b]${nq.total}[/b] contra ${nq.dif}${nq.rec?` (Recursos +${nq.rec} ${nq.rec>1?'grados':'grado'})`:''}\n[i]${nTxt(nq)}[/i]\n${nq.vent?`Ventaja: ${nq.op.vent}\n`:''}${nq.cons?`Consecuencia: ${nq.op.cons}\n`:''}`;
-  else if(p.noche&&!nq) t+=`[b]${p.noche.titulo}[/b]: no juego\n`;
+  else if(p.noche&&!p.noche.cerrada&&!nq) t+=`[b]${p.noche.titulo}[/b]: no juego\n`;
   { const ij=infSel(p,id); if(ij.length) t+=`[b]Informantes[/b] · Anulo el penalizador de ${ij.map(j=>JNOM[j]||j).join(' y ')}\n`; }
   t+='\n'; const r2=DATA.tipo==='r2'; let sum=0, hay=0;
   fasesDe(p).forEach(fz=>{ const c=calc(p,fz,id); const x=p.f[fz.k];
@@ -340,7 +340,9 @@ function pintar(){ if(!DATA) return; const ids=Object.keys(DATA.pj).sort((a,b)=>
       <div class="campos" style="margin-top:8px"><label>Atributo + Habilidad<input type="number" inputmode="numeric" data-in="ev|mod" value="${st(YO,'ev').mod??''}" placeholder="${p.ev.mod}"></label><label>Dado del imprevisto<input type="number" inputmode="numeric" min="1" max="10" data-in="ev|dado" value="${p.ev.dado!=null?p.ev.dado:(st(YO,'ev').dado??'')}" ${p.ev.dado!=null?'readonly':''} placeholder="1 a 10"></label></div>
       <div class="mini" style="margin-top:6px">En tu ficha: ${esc(p.ev.txt)}.${p.ev.blanco?' <span class="aviso">Tu ficha tiene el atributo en blanco y cuenta 0: avísale a Hana.</span>':''}</div><div class="res" id="res-ev" aria-live="polite"></div></div>`:'';
   const N=p.noche; const nst=st(YO,'noche'); const nk=nst.op!==undefined?nst.op:(N?N.sel:''); const nop=N?N.op.find(o=>o.k===nk):null;
-  const noche=N?`<div class="panel"><div class="eyebrow">Turno 6 · Opcional · Gasta un uso del trasfondo</div><h2>${esc(N.titulo)}</h2><p class="sub">${esc(N.intro)}</p>
+  const nopC=(N&&N.cerrada&&N.sel)?N.op.find(o=>o.k===N.sel):null;
+  const nocheC=nopC?`<div class="panel"><div class="eyebrow">Turno 6 · Tu jugada de la noche anterior</div><h2>${esc(nopC.n)}</h2><p class="sub">${N.res?(N.res.pasa?`Superada${N.res.ge?` con ${N.res.ge} grado${N.res.ge>1?'s':''} de éxito`:''}: ganaste la ventaja y pagas la consecuencia.`:'No salió como esperabas.'):'Hana todavía no la terminó de registrar.'} Lo que te da y lo que te cuesta ya se suma solo en tus tiradas.</p><p class="mini" style="margin:6px 0 0"><b>Ventaja:</b> ${esc(nopC.vent)}<br><b>Consecuencia:</b> ${esc(nopC.cons)}</p><div id="inf-sel"></div></div>`:'';
+  const noche=(N&&N.cerrada)?nocheC:N?`<div class="panel"><div class="eyebrow">Turno 6 · Opcional · Gasta un uso del trasfondo</div><h2>${esc(N.titulo)}</h2><p class="sub">${esc(N.intro)}</p>
       <label style="margin-top:10px">Tu jugada<select data-in="noche|op"><option value="" ${!nk?'selected':''}>No juego</option>${N.op.map(o=>`<option value="${esc(o.k)}" ${nk===o.k?'selected':''}>${esc(o.n)}${o.auto?(o.nivel?' (Ventaja, sin tirada)':' (no la tienes)'):(o.gen.length?'':' (no lo tienes: solo con Patrón)')}</option>`).join('')}</select></label>
       ${nop?`<p style="margin:8px 0 0">${esc(nop.desc)}</p><p style="margin:6px 0 0"><span class="chip pos">Ventaja</span> ${esc(nop.vent)}</p><p style="margin:6px 0 0"><span class="chip neg">Consecuencia</span> ${esc(nop.cons)}</p>
       ${nop.auto?`<p style="margin:8px 0 0">${nop.nivel?`Es una Ventaja: no se tira. Tienes <b>${esc(nop.n)} ${nop.nivel}</b>.`:`<span class="aviso">No tienes ${esc(nop.n)} en tu ficha.</span>`}</p><div class="res" id="res-noche" aria-live="polite"></div>`:`
