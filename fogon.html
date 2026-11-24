@@ -195,10 +195,10 @@ function st(id,k){ return (ST[id]=ST[id]||{})[k]=(ST[id][k]||{}); }
 function cap(t){ return t?t[0].toUpperCase()+t.slice(1):''; }
 function fasesTodas(p){ return p.fases||DATA.fases; }
 function r2Uno(p){ return DATA.tipo==='r2'?fasesTodas(p).filter(f=>f.uno):[]; } // tiradas que hace uno solo de la pareja
-function r2SelK(p){ const U=r2Uno(p); if(U.length<2) return null; const s=st(YO,'r2sel'); return (s.k&&U.some(f=>f.k===s.k))?s.k:(U.find(f=>f.mia)||U[0]).k; }
-function fasesDe(p){ const F=fasesTodas(p); const k=r2SelK(p); return k?F.filter(f=>!f.uno||f.k===k):F; }
-function r2SelHTML(p){ const U=r2Uno(p); const k=r2SelK(p); if(!k) return '';
-  return `<div class="panel"><h2>¿Qué tirada haces tú?</h2><p class="sub">En esta parte hay una tirada para cada uno. Pónganse de acuerdo en pareja: tú haces una y tu compañero, la otra.</p>
+function r2SelK(p){ const U=r2Uno(p); if(U.length<2) return null; const s=st(YO,'r2sel'); return (s.k&&U.some(f=>f.k===s.k))?s.k:((U.find(f=>f.mia)||{}).k||''); } // '' = todavía no eligió: no se le arma ninguna
+function fasesDe(p){ const F=fasesTodas(p); const k=r2SelK(p); return k===null?F:F.filter(f=>!f.uno||f.k===k); }
+function r2SelHTML(p){ const U=r2Uno(p); const k=r2SelK(p); if(k===null) return '';
+  return `<div class="panel"><h2>¿Qué tirada haces tú?</h2><p class="sub">En esta parte hay una tirada para cada uno. Pónganse de acuerdo en pareja: tú haces una y tu compañero, la otra.</p>${k?'':'<p class="aviso" style="margin-top:8px">Elige primero cuál haces tú: después te aparece la tirada para cargar el dado.</p>'}
     <div style="display:grid;gap:8px;margin-top:10px">${U.map(f=>`<label style="display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:8px;padding:10px 12px;cursor:pointer;background:${k===f.k?'var(--card2)':'transparent'}"><input type="radio" name="r2sel" data-r2sel="${esc(f.k)}" ${k===f.k?'checked':''} style="margin-top:4px"><span><b>${esc(f.nombre)}</b><br><span class="mini">${esc(f.at)} + ${esc(f.hab)} contra ${f.dif} · juzga ${esc(f.juez)}</span></span></label>`).join('')}</div></div>`; }
 function evFix(p){ if(DATA&&DATA.tipo==='r2'&&p&&p.ev){ const f=fasesDe(p)[0]; if(f){ p.ev.fase=f.k; p.ev.faseN=f.nombre; } } } // en la R2, el imprevisto cae sobre la tirada que eligió
 function evRes(p,id){ evFix(p); const e=p.ev; if(!e) return null; const s=st(id,'ev'); const mod=(s.mod!==undefined&&s.mod!=='')?Number(s.mod):(Number(e.mod)||0);
