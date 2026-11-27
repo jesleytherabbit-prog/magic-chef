@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Magic Chef · del foro al tracker
 // @namespace    https://jesleytherabbit-prog.github.io/magic-chef/ 
-// @version      2.5
+// @version      2.6
 // @description  Lee los posts y los dados del tema de Magic Chef y los envía al tracker. En la ficha de un concursante, envía la ficha.
 // @match        https://hp-avada-kedavra.foroactivo.com/t*
 // @grant        none
@@ -298,6 +298,9 @@
     const r2l = [...t.matchAll(/((?:Preparaci[oó]n|Atenci[oó]n|Limpieza)(?:\s*·\s*[^(\n·]+?)?)\s*\([^)]*\)\s*:[^\n]*?dado\s*\d+/gi)].map(m => m[1].trim()); if (r2l.length) o.r2t = r2l; // qué tiradas del truck hizo (Ronda 2)
     const ij = t.match(/Informantes\s*·\s*Anulo el penalizador de\s*([^\n]+)/i); // los jueces que eligió con Informantes
     if (ij) { const L = ij[1].split(/\s+y\s+|,\s*/i).map(x => x.replace(/[.\s]+$/, '').trim()).filter(Boolean).slice(0, 2); if (L.length) o.infJ = L; }
+    const vl = t.match(/Invernadero de Vael\s*·\s*(Amistad|Romance|Camino sin elegir)\s*·\s*(Regalarle una poci[oó]n|Regalarle una planta|Hablarle de plantas|Halagarla o seducirla|Maltratar un ingrediente)([^\n]*)/i);
+    if (vl) { const TP = { p: 'pocion', r: 'planta', h: 'hablar', a: 'halago', m: 'maltrato' }; const n = vl[2].toLowerCase(); const tipo = n.includes('poci') ? 'pocion' : n.includes('planta') && n.startsWith('regal') ? 'planta' : n.startsWith('habl') ? 'hablar' : n.startsWith('hala') ? 'halago' : 'maltrato';
+      const v = { cam: /amistad/i.test(vl[1]) ? 'amistad' : /romance/i.test(vl[1]) ? 'romance' : '', tipo }; const pt = vl[3].match(/(\d)\s*puntos?\s*de\s*pociones/i); if (pt) v.pts = +pt[1]; if (/de hierbas/i.test(vl[3])) v.hierbas = true; const dd = vl[3].match(/dado\s*(\d+)/i); if (dd) v.dado = +dd[1]; o.vael = v; } // El Invernadero de Vael
     const rs = t.match(/Rescate con Estilo\s*\([^)]*\)\s*:[^\n]*?dado\s*(\d+)/i); if (rs) o.resc = +rs[1];
     // estrellas que dice ganar en su post: «Estrellas del turno: 6» o, si hay una sola fase, su «N estrella(s)»
     const et = t.match(/Estrellas del turno:?\s*(?:\[?[^\d\n]{0,80}?)?(\d+)\b/i); if (et) o.est = +et[1];
@@ -305,19 +308,20 @@
     return Object.keys(o).length ? o : null;
   }
   // Tiradas esperadas por turno de cocina: cuántas fases tiran y quién tiene imprevisto (se actualiza con cada turno nuevo)
-  const COCINA = { 7: { fases: 1, ev: ['owein', 'ileen', 'jennifer', 'miguel'] }, 6: { fases: 0, ev: [], noche: true }, 4: { fases: 2, ev: ['robert', 'emma', 'nick', 'logan'] }, 5: { fases: 1, ev: ['irina', 'hiraki', 'derek', 'elizabeth'], resc: true } };
+  const COCINA = { 8: { fases: 3, ev: ['amanda', 'elle', 'robin', 'travis', 'maximilian'] }, 7: { fases: 1, ev: ['owein', 'ileen', 'jennifer', 'miguel'] }, 6: { fases: 0, ev: [], noche: true }, 4: { fases: 2, ev: ['robert', 'emma', 'nick', 'logan'] }, 5: { fases: 1, ev: ['irina', 'hiraki', 'derek', 'elizabeth'], resc: true } };
   function cocinaDesc(x, id, turno) {
     x = x || {}; const d = (x.d10 && x.d10.length) ? x.d10 : (x.dados || []); const fp = x.fogon || null;
     let html = d.length ? `d10 en orden: <b>${d.join(' · ')}</b> <small>(el tracker los reparte: fases y, al final, el imprevisto)</small>` : '—';
     let revisar = !d.length;
     if (COCINA[turno] && COCINA[turno].noche) { const fp0 = x.fogon || {}; return { html: (fp0.noche ? `Jugada: <b>${fp0.noche}</b>` : '<i>sin jugada en el post</i>') + (fp0.infJ ? ` · jueces: <b>${fp0.infJ.join(' y ')}</b>` : '') + (d.length ? ` · dado <b>${d[0]}</b>` : '') + (d.length > 1 ? `<br><span style="color:#A9473A">⚠ Tiró ${d.length} d10: solo cuenta el primero</span>` : ''), revisar: d.length > 1 }; }
     const E = COCINA[turno]; if (E && id && d.length) {
-      const esp = E.fases + (E.ev.includes(id) ? 1 : 0);
+      const esp = E.fases + (E.ev.includes(id) ? 1 : 0) + (fp && fp.vael && fp.vael.dado != null ? 1 : 0);
       if (d.length !== esp && !(E.resc && d.length === esp + 1)) { html += `<br><span style="color:#A9473A">⚠ Esperaba ${esp} d10 (${E.fases} ${turno >= 7 ? 'del truck' : 'de cocina'}${E.ev.includes(id) ? ' + el imprevisto' : ''}) y tiró ${d.length}</span>`; revisar = true; }
       else if (E.ev.includes(id)) html += `<br><small>Imprevisto: dado ${d[E.fases]}</small>`;
       if (E.resc && d.length === esp + 1) html += `<br><small>Dado extra al final: Rescate con Estilo (${d[d.length - 1]}).</small>`;
     }
     if (fp && fp.r2t) html += `<br><small>Hizo: <b>${fp.r2t.join(' y ')}</b></small>`;
+    if (fp && fp.vael) html += `<br><small>Invernadero de Vael: <b>${fp.vael.cam || 'sin camino'}</b> · ${fp.vael.tipo}${fp.vael.dado != null ? ` · dado ${fp.vael.dado} (el último)` : ''}</small>`;
     if (fp && fp.infJ) html += `<br><small>Informantes: anula el penalizador de <b>${fp.infJ.join(' y ')}</b>.</small>`;
     if (fp && fp.est != null) html += `<br><small>Su post dice ${fp.est} ${fp.est === 1 ? 'estrella' : 'estrellas'} en el turno.</small>`;
     if (fp) {

@@ -260,6 +260,27 @@ function calc(p,fz,id){ const x=p.f[fz.k]; const s=st(id,fz.k); const ar=arteDe(
   if(ef.g&&o.g.pasa) o.g=Object.assign({},o.g,{ge:Math.max(0,o.g.ge-ef.g)}); // el imprevisto fallado quita el grado también en el texto y en los clientes
   o.cli=o.g.pasa?5+10*o.g.ge:-5*o.g.gf; return o; }
 
+const VAEL_OP={pocion:{n:'Regalarle una poción',auto:1},planta:{n:'Regalarle una planta',at:'Inteligencia',hab:'Herbología',dif:12,m:'planta'},hablar:{n:'Hablarle de plantas',at:'Percepción',hab:'Investigación',dif:9,m:'hablar'},halago:{n:'Halagarla o seducirla',auto:1},maltrato:{n:'Maltratar un ingrediente',auto:1}};
+function vaelRes(p,id){ if(!p.vael) return null; const s=st(id,'vael'); const op=VAEL_OP[s.tipo]; if(!op) return null;
+  if(s.tipo==='pocion'){ const pt=Math.max(1,Math.min(3,Number(s.pts)||1)); return {op,d:pt+(s.hierbas?1:0),pt,hierbas:!!s.hierbas}; }
+  if(op.auto) return {op,d:-1};
+  const au=(p.vael.mods||{})[op.m]||{v:0,txt:''}; const mod=(s.mod!==''&&s.mod!=null)?Number(s.mod):Number(au.v)||0; const ot=Number(s.otros)||0;
+  const dado=(s.dado===undefined||s.dado==='')?null:Number(s.dado); if(dado==null) return {op,mod,ot,au,dado:null};
+  const total=mod+ot+dado; const g=grados(total,op.dif); const d=s.tipo==='planta'?(g.pasa?Math.min(3,1+g.ge):-1):(g.pasa?(g.ge>=2?2:1):0);
+  return {op,mod,ot,au,dado,total,g,d}; }
+function vaelLinea(p,id){ const q=vaelRes(p,id); if(!q) return ''; const s=st(id,'vael'); const cam=s.cam==='romance'?'Romance':s.cam==='amistad'?'Amistad':'Camino sin elegir'; const B=x=>`[b]${x>0?'+':''}${x} Brotes[/b]`;
+  if(q.op.auto&&s.tipo==='pocion') return `[b]Invernadero de Vael[/b] · ${cam} · ${q.op.n} (${q.pt} ${q.pt>1?'puntos':'punto'} de pociones${q.hierbas?', de hierbas':''}): ${B(q.d)}`;
+  if(q.op.auto) return `[b]Invernadero de Vael[/b] · ${cam} · ${q.op.n}: ${B(q.d)}`;
+  if(q.dado==null) return `[b]Invernadero de Vael[/b] · ${cam} · ${q.op.n}: falta el dado`;
+  return `[b]Invernadero de Vael[/b] · ${cam} · ${q.op.n}: ${q.op.at} + ${q.op.hab} = ${q.mod}, dado ${q.dado}${q.ot?`, otros ${sg(q.ot)}`:''} = [b]${q.total}[/b] contra ${q.op.dif}: ${B(q.d)}`; }
+function vaelHTML(p,id){ if(!p.vael) return ''; const s=st(id,'vael'); const op=VAEL_OP[s.tipo];
+  const campos=!op?'':s.tipo==='pocion'?`<div class="campos" style="margin-top:8px"><label>Puntos de pociones que gastas<select data-in="vael|pts">${[1,2,3].map(n=>`<option value="${n}" ${Number(s.pts||1)===n?'selected':''}>${n} (${['','básica','intermedia','avanzada'][n]})</option>`).join('')}</select></label><label class="c3" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" data-in="vael|hierbas" ${s.hierbas?'checked':''}> Es una poción de hierbas (+1)</label></div>`
+    :op.auto?'':`<div class="reto" style="margin-top:8px">${esc(op.at)} + ${esc(op.hab)} contra <b>${op.dif}</b></div><div class="campos"><label>Atributo + Habilidad<input type="number" inputmode="numeric" data-in="vael|mod" value="${s.mod??''}" placeholder="${(p.vael.mods||{})[op.m]?.v??0}"></label><label>Dado del foro (el último)<input type="number" inputmode="numeric" min="1" max="10" data-in="vael|dado" value="${s.dado??''}" placeholder="1 a 10"></label><label class="c3">Otros<input type="number" inputmode="numeric" data-in="vael|otros" value="${s.otros??''}" placeholder="0"></label></div><div class="mini" style="margin-top:6px">En tu ficha: ${esc((p.vael.mods||{})[op.m]?.txt||'')}.</div>`;
+  return `<div class="panel"><div class="eyebrow">Opcional · Una jugada por turno</div><h2>El Invernadero de Vael</h2>
+    <p class="sub">Si quieres acercarte a la profesora Vael, como amiga o como algo más. Las pociones que le regalas se descuentan de tus puntos de pociones. Si tu jugada lleva tirada, es el último dado de tu post.${p.vael.brotes!=null?` Llevas <b>${p.vael.brotes}</b> Brotes.`:''}</p>
+    <div class="campos"><label>Tu camino<select data-in="vael|cam"><option value="">Elige</option><option value="amistad" ${s.cam==='amistad'?'selected':''}>Amistad</option><option value="romance" ${s.cam==='romance'?'selected':''}>Romance (solo mayores de edad)</option></select></label>
+    <label class="c3">Tu jugada<select data-in="vael|tipo"><option value="">No juego este turno</option>${Object.entries(VAEL_OP).map(([k,o])=>`<option value="${k}" ${s.tipo===k?'selected':''}>${esc(o.n)}</option>`).join('')}</select></label></div>
+    ${campos}<div class="res" id="res-vael" aria-live="polite"></div></div>`; }
 function plantilla(id){ const p=DATA.pj[id]; let t=`[b]${DATA.titulo} · ${p.n}[/b]\n`;
   if(p.ing) t+=`Ingrediente: ${p.ing.nombre} (nº ${p.ing.n})\n`;
   const q=cmpRes(p,id); if(q&&q.dado!=null) t+=`${cap(q.r.lbl)}: ${q.r.nombre} (nº ${q.r.n}): Carisma + Coordinación = ${q.mod}, dado ${q.dado} = [b]${q.total}[/b] contra ${q.r.dif}: ${q.sync?'sincronizados':'desincronizados'}\n`;
@@ -283,6 +304,7 @@ function plantilla(id){ const p=DATA.pj[id]; let t=`[b]${DATA.titulo} · ${p.n}[
     hay++; t+='\n'; });
   const rq=rescDe(p)?rescRes(p,id):null; if(rq&&rq.dado!=null){ const g=rq.g; t+=`[b]Rescate con Estilo[/b] (Rupert): Voluntad + Estilo = ${rq.mod}, dado ${rq.dado}${rq.ext?`, modificadores ${sg(rq.ext)}`:''} = [b]${rq.total}[/b] contra 9\n${rq.conf?'[i]+1 Confesionario[/i]\n':''}Resultado: ${g.pasa?(g.ge?`superada con ${g.ge} ${g.ge>1?'grados':'grado'} de éxito`:'superada')+' · plato salvado':'fallada'} · ${rq.est?ESTR_BB.repeat(rq.est)+' ':''}[b]${rq.est} ${rq.est===1?'estrella':'estrellas'}[/b]\n\n`; sum+=rq.est; hay++; }
   if(hay>1) t+=r2?`[b]Clientes del turno: ${sum>0?'+':''}${sum}[/b]`:`[b]Estrellas del turno:[/b] ${sum?ESTR_BB.repeat(sum)+' ':''}[b]${sum}[/b]`;
+  { const vl=vaelLinea(DATA.pj[id],id); if(vl) t+='\n\n'+vl; }
   return t.trim(); }
 
 function dynChips(p,fz,id){ const x=p.f[fz.k]; const nl=nLocal(p,id,fz.k); const rm=cmpMods(p,id,fz.k).concat(nl.m).map(m=>`<span class="chip ${m.v>0?'pos':'neg'}">${sg(m.v)} ${esc(m.t)}</span>`).join(''); const em=evEf(p,id,fz.k).m; const ev=em?`<span class="chip neg">${sg(em)} imprevisto</span>`:'';
@@ -304,6 +326,7 @@ function faseHTML(p,fz,id){ const x=p.f[fz.k]; const s=st(id,fz.k);
     <div class="res" id="res-${fz.k}" aria-live="polite"></div></div>`; }
 
 function pintarExtras(id){ const p=DATA.pj[id];
+  { const ev=$('#res-vael'); if(ev){ const q=vaelRes(p,id); if(!q){ ev.className='res'; ev.innerHTML='<span class="mini">Elige tu jugada.</span>'; } else if(!q.op.auto&&q.dado==null){ ev.className='res'; ev.innerHTML='<span class="mini">Escribe el dado y te digo cuántos Brotes ganas.</span>'; } else { ev.className='res '+(q.d>0?'ok':q.d<0?'ko':''); ev.innerHTML=(q.total!=null?`<span class="tot num">${q.total}</span><span class="mini">contra ${q.op.dif}</span>`:'')+`<span class="ver">${q.d>0?'+':''}${q.d} Brotes</span>`; } } }
   const ei=$('#inf-sel'); if(ei){ const h=infHTML(p,id); if(ei.dataset.h!==h){ ei.innerHTML=h; ei.dataset.h=h; } }
   const en=$('#res-noche'); if(en&&p.noche){ const q=nRes(p,id); if(!q||q.dado==null){ en.className='res'; en.innerHTML='<span class="mini">Escribe el dado de tu jugada y te digo cómo te fue.</span>'; }
     else if(q.auto){ en.className='res '+(q.vent?'ok':''); en.innerHTML=`<span class="ver">${esc(nTxt(q))}</span>`; }
@@ -367,6 +390,7 @@ function pintar(){ if(!DATA) return; const ids=Object.keys(DATA.pj).sort((a,b)=>
      <div class="reto">Voluntad + Estilo contra <b>9</b>${rescDe(p).conf?` <span class="chip pos">+${rescDe(p).conf} Confesionario</span>`:''}</div>
      <div class="campos"><label>Atributo + Habilidad<input type="number" inputmode="numeric" data-in="resc|mod" value="${st(YO,'resc').mod??''}" placeholder="${rescDe(p).mod}"></label><label>Dado del foro<input type="number" inputmode="numeric" min="1" max="10" data-in="resc|dado" value="${st(YO,'resc').dado??''}" placeholder="vacío si no lo usas"></label><label class="c3">Otros<input type="number" inputmode="numeric" data-in="resc|otros" value="${st(YO,'resc').otros??''}" placeholder="0"></label></div>
      <div class="mini" style="margin-top:6px">En tu ficha: ${esc(rescDe(p).txt)}.</div><div class="res" id="res-resc" aria-live="polite"></div></div>`:'')+
+   vaelHTML(p,YO)+
    `<div class="panel"><h2>Para tu post</h2><p class="sub">Copia este texto debajo de tu narración.</p><textarea id="plant" rows="8" readonly></textarea>
      <div class="fila-btn"><button class="btn primary" id="cop">Copiar texto</button><span class="mini" id="copMsg"></span></div></div>
     <div class="panel"><details><summary>Reglas rápidas</summary><p class="sub">Tirada: d10 + Atributo + Habilidad + modificadores, contra la dificultad de la fase. Los modificadores externos suman como máximo +7. La escala de resultados es 5, 7, 9, 12, 15, 18, 21 y 25: cada escalón que superas es un grado de éxito, y cada escalón por debajo, un grado de fracaso. Estrellas por fase: 0 si fallas, 1 si superas y 1 más por cada grado de éxito, hasta 3.</p></details></div>`;
@@ -375,6 +399,8 @@ function pintar(){ if(!DATA) return; const ids=Object.keys(DATA.pj).sort((a,b)=>
 document.addEventListener('change',e=>{ const el=e.target;
   if(el.id==='yoSel'){ YO=el.value||null; guardar(); pintar(); return; }
   if(el.dataset.in&&el.dataset.in.endsWith('|arte')){ const k=el.dataset.in.split('|')[0]; st(YO,k).arte=el.value; guardar(); pintar(); return; }
+  if(el.dataset.in==='vael|tipo'||el.dataset.in==='vael|cam'||el.dataset.in==='vael|pts'){ st(YO,'vael')[el.dataset.in.split('|')[1]]=el.value; guardar(); pintar(); return; }
+  if(el.dataset.in==='vael|hierbas'){ st(YO,'vael').hierbas=el.checked; guardar(); pintar(); return; }
   if(el.dataset.in==='noche|op'){ st(YO,'noche').op=el.value; guardar(); pintar(); return; }
   if(el.dataset.r2sel){ st(YO,'r2sel').k=el.dataset.r2sel; guardar(); pintar(); return; }
   if(el.dataset.inf!=null){ const p=DATA.pj[YO]; const s=st(YO,'inf'); const L=Array.isArray(s.j)?s.j.slice():(((p&&p.noche&&p.noche.jue)||[]).slice()); L[+el.dataset.inf]=el.value; if(L[0]&&L[0]===L[1]) L[1-(+el.dataset.inf)]=''; s.j=L; guardar(); pintar(); return; }
