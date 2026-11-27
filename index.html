@@ -811,9 +811,9 @@ function r2Mapa(){ // la Cuchara elige primero; después el d15 por orden de tir
 function r2TruckN(n){ const R=r2(); return R.trucks.find(t=>Number(t.n)===Number(n))||null; }
 function r2Truck(i){ const n=r2Mapa().asig[i]; return n?r2TruckN(n):null; }
 function r2Pen(truck,t){ return truck&&t.juez?Number(truck.pen?.[t.juez]||0):0; }
-const R2_ARCANO=1; // bonificador por usar un arcano que ayude al plato (p. ej. Calidum para mantenerlo caliente); cuenta dentro del tope de +7 de Otros
+// arcanos que no dan bonificador pero ayudan (Calidum, Colovaria...): +1 por arcano, máximo +3, dentro del tope de +7 de Otros
 function r2Calc(id,t,truck){ const x=S.r2.tir?.[id]?.[t.k]||{}; const au=r2Auto(id,t); const E=r2NEf(id);
-  const mod=x.mod!==''&&x.mod!=null?Number(x.mod):au.v; const ot=Number(x.ot)||0, nm=E.mas[t.k]||0, nn=E.menos[t.k]||0, arc=x.arc?R2_ARCANO:0, otC=Math.min(7,ot+nm+arc);
+  const mod=x.mod!==''&&x.mod!=null?Number(x.mod):au.v; const ot=Number(x.ot)||0, nm=E.mas[t.k]||0, nn=E.menos[t.k]||0, arc=x.arc===true?1:Math.max(0,Math.min(3,Number(x.arc)||0)), otC=Math.min(7,ot+nm+arc);
   let pen=r2Pen(truck,t); const pen0=!!(pen&&E.pen0.includes(t.juez)); if(pen0) pen=0;
   const base={mod,au,ot,otC,pen,pen0,nm,nn,arc,nTxt:(E.txt[t.k]||[]).concat(arc?['+'+arc+' Arcano']:[]),capWarn:ot+nm+arc>7,dif:Math.max(Number(t.dif)||9,E.dif[t.k]||0)};
   if(x.dado===''||x.dado==null) return {...base,pend:true};
@@ -1582,7 +1582,7 @@ function vR2Turno(t){ const R=r2(); const pl=planDe(t)||{}; const rt=PLAN0[t]?.r
   const X=evX(); const evs=X.list.map((e,i)=>({e,i})).filter(z=>Number(z.e.turno)===Number(t));
   const celda=(id,q,truck)=>{ const x=S.r2.tir?.[id]?.[q.k]||{}; const c=r2Calc(id,q,truck); const key=id+'|'+q.k;
     return `<div class="r2-in"><input type="number" data-r2t="${key}" data-k="mod" value="${x.mod??''}" placeholder="${c.au.v}" title="${esc(c.au.txt)}" aria-label="Atributo + Habilidad de ${esc(r2Nom(id))}"><input type="number" data-r2t="${key}" data-k="ot" value="${x.ot??''}" placeholder="0" title="Otros" aria-label="Otros"><input type="number" min="1" max="10" data-r2t="${key}" data-k="dado" value="${x.dado??''}" title="Dado" aria-label="Dado"></div>
-      <label class="mini" style="display:block;margin-top:3px"><input type="checkbox" data-r2t="${key}" data-k="arc" ${x.arc?'checked':''}> Usó un arcano que ayuda (+${R2_ARCANO})</label>
+      <label class="mini" style="display:block;margin-top:3px">Arcanos que ayudan (+1 c/u, máx. +3): <input type="number" min="0" max="3" style="width:46px" data-r2t="${key}" data-k="arc" value="${x.arc===true?1:(x.arc||'')}"></label>
       ${c.nTxt.length||c.pen0?`<div class="mini">${c.nTxt.map(z=>`<span class="chip ${/^\+/.test(z)?'pos':'neg'}">${esc(z)}</span>`).join('')}${c.pen0?`<span class="chip pos">sin penalizador de ${esc(r2Juez(q.juez))}</span>`:''}</div>`:''}
       <div class="mini">${c.pend?`${c.pen?`<span class="chip neg">${c.pen} ${esc(r2Juez(q.juez))}</span>`:''}falta el dado`:`<b>${c.total}</b> vs ${c.dif} · <span class="chip ${c.cli>0?'pos':c.cli<0?'neg':''}">${c.cli>0?'+':''}${c.cli} clientes</span>${c.pen?` <span class="chip neg">${c.pen} ${esc(r2Juez(q.juez))}</span>`:''}${c.evG?` <span class="warn">imprevisto −${c.evG} grado</span>`:''}`}${c.capWarn?' <span class="warn">tope +7</span>':''}</div>`; };
   let hechas=0, tot=0;
