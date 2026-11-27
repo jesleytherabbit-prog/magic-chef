@@ -1,0 +1,140 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Cormorant+Garamond:ital,wght@0,500;1,500&family=IM+Fell+English+SC&display=swap');
+
+/* =========================================================
+   SANATORE MÍNIMA · círculo ritual con hover de varita
+   ========================================================= */
+.snm-orb{
+  position:relative !important;
+  display:block !important;
+  width:280px !important;
+  height:340px !important;
+  margin:20px auto !important;
+  cursor:pointer !important;
+  font-family:'Cormorant Garamond', Georgia, serif !important;
+}
+.snm-orb *{ box-sizing:border-box !important; }
+
+/* disco oscuro de fondo */
+.snm-disc{
+  position:absolute !important; top:0 !important; left:0 !important;
+  width:280px !important; height:280px !important; border-radius:50% !important;
+  background:radial-gradient(circle at 50% 45%, #2a2531 0%, #16131b 55%, #0a080c 100%) !important;
+  box-shadow:0 0 0 1px #5c4d36, 0 0 0 5px #0b090d, 0 0 0 6px #8a744e, 0 14px 40px rgba(0,0,0,.7) !important;
+  overflow:hidden !important;
+  transition:box-shadow 1.2s ease !important;
+}
+.snm-orb:hover .snm-disc{
+  box-shadow:0 0 0 1px #c9b27f, 0 0 0 5px #0b090d, 0 0 0 6px #d8c290, 0 0 45px rgba(255,250,230,.35), 0 14px 40px rgba(0,0,0,.7) !important;
+}
+
+/* anillos */
+.snm-ring{ position:absolute !important; top:0 !important; left:0 !important; width:280px !important; height:280px !important; overflow:visible !important; }
+.snm-ring-out{ animation:snm-spin 50s linear infinite !important; opacity:.55 !important; transition:opacity 1s .3s ease !important; }
+.snm-ring-in{ animation:snm-spin-r 34s linear infinite !important; opacity:.3 !important; transition:opacity 1s .6s ease !important; }
+.snm-orb:hover .snm-ring-out{ opacity:1 !important; }
+.snm-orb:hover .snm-ring-in{ opacity:.9 !important; }
+.snm-ring-out text{
+  font-family:'Cinzel Decorative', Georgia, serif !important; font-weight:700 !important;
+  font-size:16px !important; fill:#e9dfc6 !important;
+}
+.snm-orb:hover .snm-ring-out text{ fill:#fffaf0 !important; filter:drop-shadow(0 0 3px rgba(255,250,235,.9)) !important; }
+@keyframes snm-spin{ to{ transform:rotate(360deg);} }
+@keyframes snm-spin-r{ to{ transform:rotate(-360deg);} }
+
+/* el sello interior se dibuja al pasar la varita */
+.snm-draw{ stroke-dasharray:560 !important; stroke-dashoffset:560 !important; transition:stroke-dashoffset 2.2s .5s ease-in-out !important; }
+.snm-orb:hover .snm-draw{ stroke-dashoffset:0 !important; }
+
+/* núcleo de luz */
+.snm-core{
+  position:absolute !important; top:90px !important; left:90px !important;
+  width:100px !important; height:100px !important; border-radius:50% !important;
+  opacity:0 !important; transform:scale(.2) !important;
+  transition:opacity .9s ease, transform 1.4s cubic-bezier(.2,.8,.2,1) !important;
+}
+.snm-core:before{
+  content:'' !important; position:absolute !important; inset:0 !important; border-radius:50% !important;
+  background:radial-gradient(circle, #ffffff 0%, rgba(255,253,245,.9) 20%, rgba(240,236,225,.35) 48%, transparent 70%) !important;
+  filter:blur(1.5px) !important;
+  animation:snm-breathe 3.6s ease-in-out infinite !important;
+}
+.snm-orb:hover .snm-core{ opacity:1 !important; transform:scale(1) !important; transition-delay:.7s, .7s !important; }
+@keyframes snm-breathe{ 0%,100%{ transform:scale(.85); opacity:.8;} 50%{ transform:scale(1.2); opacity:1;} }
+
+/* ondas */
+.snm-wave{
+  position:absolute !important; top:115px !important; left:115px !important;
+  width:50px !important; height:50px !important; border-radius:50% !important;
+  border:1px solid rgba(255,252,240,.75) !important; opacity:0 !important;
+}
+.snm-orb:hover .snm-wave{ animation:snm-wave 4.5s ease-out infinite !important; }
+.snm-orb:hover .snm-w1{ animation-delay:1.2s !important; }
+.snm-orb:hover .snm-w2{ animation-delay:2.7s !important; }
+.snm-orb:hover .snm-w3{ animation-delay:4.2s !important; }
+@keyframes snm-wave{ 0%{ transform:scale(.6); opacity:.9;} 100%{ transform:scale(5); opacity:0;} }
+
+/* motas que suben */
+.snm-motes{ position:absolute !important; inset:0 !important; opacity:0 !important; transition:opacity 1s 1s ease !important; }
+.snm-orb:hover .snm-motes{ opacity:1 !important; }
+.snm-motes i{
+  position:absolute !important; bottom:20px !important; width:3px !important; height:3px !important; border-radius:50% !important;
+  background:#fffdf4 !important; box-shadow:0 0 7px 2px rgba(255,252,235,.85) !important; opacity:0 !important;
+  animation:snm-rise 6s linear infinite !important;
+}
+.snm-motes i:nth-child(1){ left:34%; animation-delay:0s !important; }
+.snm-motes i:nth-child(2){ left:42%; animation-delay:1s !important; width:2px !important; height:2px !important; }
+.snm-motes i:nth-child(3){ left:50%; animation-delay:2.1s !important; }
+.snm-motes i:nth-child(4){ left:58%; animation-delay:.5s !important; width:2px !important; height:2px !important; }
+.snm-motes i:nth-child(5){ left:64%; animation-delay:3s !important; }
+.snm-motes i:nth-child(6){ left:46%; animation-delay:3.9s !important; width:2px !important; height:2px !important; }
+.snm-motes i:nth-child(7){ left:38%; animation-delay:4.6s !important; }
+.snm-motes i:nth-child(8){ left:55%; animation-delay:5.3s !important; width:2px !important; height:2px !important; }
+@keyframes snm-rise{
+  0%{ transform:translate(0,0); opacity:0; }
+  20%{ opacity:1; }
+  60%{ transform:translate(10px,-140px); }
+  100%{ transform:translate(-8px,-240px); opacity:0; }
+}
+
+/* ===== LA VARITA ===== */
+.snm-wand{
+  position:absolute !important; top:0 !important; left:0 !important; z-index:10 !important;
+  width:150px !important; height:20px !important;
+  opacity:0 !important; pointer-events:none !important;
+  transform-origin:0 50% !important;
+  transform:translate(300px,-30px) rotate(-20deg) !important;
+}
+.snm-wand svg{ width:150px !important; height:20px !important; overflow:visible !important; display:block !important; }
+.snm-orb:hover .snm-wand{ animation:snm-wave-wand 2.6s cubic-bezier(.45,.05,.35,1) forwards !important; }
+
+/* la punta de la varita (x=0) recorre el círculo y luego se retira */
+@keyframes snm-wave-wand{
+  0%  { opacity:0; transform:translate(300px,-30px) rotate(-20deg); }
+  12% { opacity:1; transform:translate(232px,55px) rotate(-28deg); }
+  30% { transform:translate(178px,100px) rotate(-34deg); }
+  45% { transform:translate(110px,160px) rotate(-42deg); }
+  58% { transform:translate(112px,110px) rotate(-30deg); }
+  72% { transform:translate(148px,132px) rotate(-36deg); opacity:1; }
+  100%{ opacity:0; transform:translate(330px,40px) rotate(-15deg); }
+}
+
+/* chispa de la punta */
+.snm-spark{ animation:snm-spark .25s ease-in-out infinite alternate !important; transform-origin:center !important; }
+@keyframes snm-spark{ from{ opacity:.6; } to{ opacity:1; } }
+
+/* ===== etiqueta del turno ===== */
+.snm-turn{
+  position:absolute !important; left:0 !important; right:0 !important; top:296px !important;
+  text-align:center !important; opacity:0 !important; transform:translateY(-8px) !important;
+  transition:opacity .9s ease, transform .9s ease !important;
+}
+.snm-orb:hover .snm-turn{ opacity:1 !important; transform:translateY(0) !important; transition-delay:1.4s !important; }
+.snm-turn span{
+  display:inline-block !important; padding:5px 18px !important;
+  font-family:'IM Fell English SC', Georgia, serif !important; font-size:15px !important;
+  letter-spacing:.25em !important; color:#f2ead6 !important; text-transform:uppercase !important;
+  background:#121016 !important; border:1px solid #a88d5c !important;
+  box-shadow:0 0 0 3px #121016, 0 0 0 4px #5c4d36, 0 0 18px rgba(255,250,230,.25) !important;
+  text-shadow:0 0 8px rgba(255,250,235,.6) !important;
+}
+.snm-turn span:before, .snm-turn span:after{ content:'\2726' !important; color:#cdb98d !important; margin:0 10px !important; font-size:10px !important; }
