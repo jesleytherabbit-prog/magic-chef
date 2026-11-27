@@ -308,7 +308,7 @@
     return Object.keys(o).length ? o : null;
   }
   // Tiradas esperadas por turno de cocina: cuántas fases tiran y quién tiene imprevisto (se actualiza con cada turno nuevo)
-  const COCINA = { 8: { fases: 3, ev: ['amanda', 'elle', 'robin', 'travis', 'maximilian'] }, 7: { fases: 1, ev: ['owein', 'ileen', 'jennifer', 'miguel'] }, 6: { fases: 0, ev: [], noche: true }, 4: { fases: 2, ev: ['robert', 'emma', 'nick', 'logan'] }, 5: { fases: 1, ev: ['irina', 'hiraki', 'derek', 'elizabeth'], resc: true } };
+  const COCINA = { 8: { fases: 1, ev: ['amanda', 'elle', 'robin', 'travis', 'maximilian'] }, 7: { fases: 1, ev: ['owein', 'ileen', 'jennifer', 'miguel'] }, 6: { fases: 0, ev: [], noche: true }, 4: { fases: 2, ev: ['robert', 'emma', 'nick', 'logan'] }, 5: { fases: 1, ev: ['irina', 'hiraki', 'derek', 'elizabeth'], resc: true } };
   function cocinaDesc(x, id, turno) {
     x = x || {}; const d = (x.d10 && x.d10.length) ? x.d10 : (x.dados || []); const fp = x.fogon || null;
     let html = d.length ? `d10 en orden: <b>${d.join(' · ')}</b> <small>(el tracker los reparte: fases y, al final, el imprevisto)</small>` : '—';

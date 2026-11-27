@@ -1280,7 +1280,7 @@ const PJCOL={logan:'#803E3A',volker:'#803E3A',irina:'#4ca07d',derek:'#769aaf',ro
 const CMP_FASE={Cocina:'base',Latrocinio:'toque','Presentación':'pres'};
 function habAt(h){ const i=SKN.indexOf(h); return i<0?'Voluntad':ATL[SKA[i]]; }
 function rollsDe(rd){ const c=(S.rcfg&&S.rcfg[rd]&&S.rcfg[rd].rolls)||{}; return {base:c.base||ROLLS0.base,toque:c.toque||ROLLS0.toque,pres:c.pres||ROLLS0.pres}; }
-const PLAN0={4:{ronda:'R1',fases:['base','toque'],ev:true,titulo:'La cocción'},5:{ronda:'R1',fases:['pres'],ev:true,titulo:'El emplatado'},6:{ronda:'R2',fases:[],ev:false,r2t:[],titulo:'La noche anterior'},7:{ronda:'R2',fases:[],ev:true,r2t:['est','coc'],titulo:'Food Trucks · Preparación'},8:{ronda:'R2',fases:[],ev:true,r2t:['coo','atl','lat','ora'],vael:true,titulo:'Food Trucks · Atención'}}; // lo que ya es público del Turno 4 (el post): sirve aunque no hayas cargado el archivo privado
+const PLAN0={4:{ronda:'R1',fases:['base','toque'],ev:true,titulo:'La cocción'},5:{ronda:'R1',fases:['pres'],ev:true,titulo:'El emplatado'},6:{ronda:'R2',fases:[],ev:false,r2t:[],titulo:'La noche anterior'},7:{ronda:'R2',fases:[],ev:true,r2t:['est','coc'],titulo:'Food Trucks · Preparación'},8:{ronda:'R2',fases:[],ev:true,r2t:['coo','atl'],vael:true,titulo:'Food Trucks · Atención'}}; // lo que ya es público del Turno 4 (el post): sirve aunque no hayas cargado el archivo privado
 function planDe(t){ const a=S.plan&&S.plan[t], b=PLAN0[t]; return (a||b)?Object.assign({},a||{},b||{}):null; } // lo publicado (PLAN0) manda sobre el archivo privado
 
 // ----- Eventos aleatorios: una tirada del PJ; si la falla pierde un grado de éxito (o un modificador) en la fase indicada
