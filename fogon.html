@@ -257,6 +257,7 @@ function calc(p,fz,id){ const x=p.f[fz.k]; const s=st(id,fz.k); const ar=arteDe(
   const o={mod,suma,otros,raw,ext,tope:raw>7,dado,rm,evM:ef.m,evG:ef.g,dif};
   if(dado==null) return o;
   o.total=mod+dado+ext; o.g=grados(o.total,dif); o.est=o.g.pasa?Math.min(3,1+o.g.ge):0; if(ef.g&&o.est>0) o.est=Math.max(0,o.est-ef.g);
+  if(ef.g&&o.g.pasa) o.g=Object.assign({},o.g,{ge:Math.max(0,o.g.ge-ef.g)}); // el imprevisto fallado quita el grado también en el texto y en los clientes
   o.cli=o.g.pasa?5+10*o.g.ge:-5*o.g.gf; return o; }
 
 function plantilla(id){ const p=DATA.pj[id]; let t=`[b]${DATA.titulo} · ${p.n}[/b]\n`;
